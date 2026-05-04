@@ -1,0 +1,92 @@
+\documentclass[12pt,a4paper,oneside]{scrreprt}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[english]{babel}
+\usepackage{libertinus}
+\usepackage{amsmath,amsfonts, amssymb,dsfont}
+\usepackage{graphicx} 
+\usepackage{float}
+\usepackage{hyperref} 
+\usepackage{geometry} 
+\geometry{left=3.5cm, right=2.5cm, top=2.5cm, bottom=2.5cm}
+
+\usepackage{listings} 
+\usepackage{xcolor}
+\lstset{ 
+  language=Python,              
+  basicstyle=\small\ttfamily,    
+  backgroundcolor=\color{white},
+  showspaces=false,             
+  showstringspaces=false,       
+  showtabs=false, 
+  frame=single,   
+  tabsize=3,                    
+  breaklines=true,              
+  breakatwhitespace=false, 
+  keywordstyle=\bfseries\color{blue},   
+  commentstyle=\rmfamily\color{gray}, 
+  stringstyle=\itshape\color{teal},   
+}
+
+\title{Traffic Monitoring and Analysis system}
+\subtitle{Technical Documentation and Implementation Report}
+\author{Patrik Poklop}
+\date{\today}
+\begin{document}
+
+\maketitle
+
+\tableofcontents
+
+\chapter{Introduction}
+The monitoring of road traffic is an essential task for modern urban infrastructure management. This thesis focuses on the development of an automated system using \textbf{Computer Vision} and \textbf{Edge AI} to provide real-time insights into traffic density and object classification.
+
+\section{Project Objectives}
+The primary goal of this project is to implement a robust pipeline that:
+¨\begin{itemize}
+    \item Processes RTSP video streams in real-time.
+    \item Detects and classifies vehicles and pedestrians using the \textbf{YOLO} model.
+    \item Stores telemetry data in a \textbf{PostgreSQL} database via \textbf{MQTT}.
+    \item Visualizes the results on an interactive dashboard.
+\end{itemize}
+
+
+
+\chapter{System Architecture}
+The system follows a modular architecture to ensure low latency and data persistence.
+
+\section{Data Pipeline}
+1. \textbf{Ingestion:} RTSP stream processed via GStreamer.
+2. \textbf{Inference:} Object detection using a quantized YOLO model.
+3. \textbf{Transmission:} Metadata sent via MQTT protocol.
+4. \textbf{Storage:} Historical analysis stored in PostgreSQL.
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.8\textwidth]{architecture.png}
+    \caption{Proposed System Architecture}
+    \label{fig:arch}
+\end{figure}
+
+\chapter{Mathematical background}
+To evaluate the detection accuracy, we define the Loss function used during the fine-tuning phase:
+
+\begin{equation}
+L = \lambda_{coord} \sum_{i=0}^{S^2} \sum_{j=0}^{B} \mathds{1}_{ij}^{obj} \left[ (x_i - \hat{x}_i)^2 + (y_i - \hat{y}_i)^2 \right]
+\end{equation}
+
+\chapter{Implementation}
+The core of the system is written in Python, utilizing GStreamer for video pipeline management.
+\begin{lstlisting}[language=Python, caption=GStreamer Pipeline Setup]
+import gi
+gi.require_version('Gst', '1.0')
+# Your code here...
+\end{lstlisting}
+
+\begin{thebibliography}{9}
+\bibitem{yolo} 
+Redmon, J., et al. (2016). You Only Look Once: Unified, Real-Time Object Detection. CVPR.
+\end{thebibliography}
+
+\end{document}
