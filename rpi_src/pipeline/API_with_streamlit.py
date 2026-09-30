@@ -817,7 +817,7 @@ def run_streamlit():
         st.subheader("Detections Time Range")
         time_range = st.selectbox(
             "Select time range",
-            options=[60, 180, 360, 720, 1440, 2880, 5760, 10080, 20160, 40320],
+            options=[60, 180, 360, 720, 1440, 2880, 5760, 10080, 20160, 40320, 80640, 161280, 322560, 604800],
             format_func=time_format_func,
             index=1
         )
