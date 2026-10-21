@@ -23,3 +23,5 @@ rpi_src/model_compile/yolov8m.onnx
 rpi_src/model_compile/yolov8m.har
 rpi_src/model_compile/yolov8s.har
 rpi_src/model_compile/calib_dataset_npy.zip
+rpi_src/model_compile/calib_dataset/
+rpi_src/model_compile/calib_dataset_npy
