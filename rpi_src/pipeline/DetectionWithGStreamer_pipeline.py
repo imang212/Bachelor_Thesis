@@ -25,7 +25,8 @@ import sys
 from datetime import datetime
 from collections import deque
 from collections import defaultdict
-from MQTTClient import MQTTPublisher
+from common.MQTTClient import MQTTPublisher
+from common.config import get_camera_rtsp_url
 from WebSocket import WebSocketServerWithDetectionData
 try:
     from hailo import get_roi_from_buffer, HAILO_DETECTION, HAILO_UNIQUE_ID
@@ -316,7 +317,7 @@ class HailoTrackerPipeline:
         if enable_websocket: self.websocket_server = WebSocketServerWithDetectionData(detection_data=self.detection_data, host="0.0.0.0", port=8765)
         # MQTT publisher
         self.mqtt_publisher = None
-        if enable_mqtt: self.mqtt_publisher = MQTTPublisher(broker_host="mqtt.portabo.cz", broker_port=8883, topic="/videoanalyza", client_id="hailo_tracker_client", username="videoanalyza", password="phdA9ZNW1vfkXdJkhhbP")
+        if enable_mqtt: self.mqtt_publisher = MQTTPublisher(client_id="hailo_tracker_client")
         # frame count
         self.frame_count = 0
         # Set of sent track IDs to avoid duplicates
@@ -367,7 +368,7 @@ class HailoTrackerPipeline:
             )
         else:
             if self.rtsp_link is None:
-                self.rtsp_link = "admin:Dcuk.123456@192.168.37.99/Stream"
+                self.rtsp_link = get_camera_rtsp_url().replace("rtsp://", "", 1)  # from .env
             pipeline_str = (
                 f"rtspsrc location=rtsp://{self.rtsp_link} latency=150 drop-on-latency=true "
                 "! rtph264depay "
@@ -735,8 +736,8 @@ def main():
     """
     import argparse
     parser = argparse.ArgumentParser(description='Hailo Detection Pipeline')
-    parser.add_argument('--rpicamera', action='store_true', help='Use RPi camera stream (IP camera 192.168.37.99 stream default)')
-    parser.add_argument('--rtsp-link', type=str, help='Use specific link to IP camera stream etc.: admin:password@192.168.37.99/Stream (if not set, uses default rtsp camera)')
+    parser.add_argument('--rpicamera', action='store_true', help='Use RPi camera stream (default: IP camera from CAMERA_RTSP_URL in .env)')
+    parser.add_argument('--rtsp-link', type=str, help='Use specific link to IP camera stream (format: user:password@host/Stream, without rtsp://); if not set, CAMERA_RTSP_URL from .env is used')
     parser.add_argument('--video-file', type=str, help='Enter path to video file for analysis (if not set, uses camera or RTSP)')
     parser.add_argument('--enable-rtsp', action='store_true', help='Enable RTSP streaming (default False)')
     parser.add_argument('--enable-websocket', action='store_true', help='Enable WebSocket (default False)')
@@ -806,11 +807,8 @@ CONFIGURATION NOTES:
    - Or VLC: vlc rtsp://YOUR_PI_IP:8554/hailo_stream
    - Encoded with H.264 for wide compatibility
 2. MQTT Publisher:
-    - Broker: mqtt.portabo.cz
-    - Port: 8883 (TLS)
-    - Topic: /videoanalyza
+    - Broker, port, topic and credentials are loaded from .env (see .env.example)
     - Client ID: hailo_tracker_client
-    - Username: videoanalyza
     - Publishes JSON data with detection results
 3. WebSocket Server for detections sending:
    - Default port: 8765

@@ -6,7 +6,8 @@ import time
 from datetime import datetime
 import threading
 import json
-from MQTTClient import MQTTPublisher
+from common.MQTTClient import MQTTPublisher
+from common.config import get_db_config
 from collections import deque
     
 class PostgreDatabaseManager:
@@ -24,18 +25,19 @@ class PostgreDatabaseManager:
         """
         Initialize PostgreSQL connection pool. 
         Args:
-            db_config: Database configuration dictionary
+            db_config: Database configuration dictionary. If None, it is loaded
+            from the .env file (see common/config.py). Expected keys:
             {
-                'host': '192.168.37.56',
+                'host': ...,
                 'port': 5432,
-                'database': 'hailo_db',
-                'user': 'hailo_user',
-                'password': 'hailo_pass',
+                'database': ...,
+                'user': ...,
+                'password': ...,
                 'min_connections': 1,
                 'max_connections': 10
             }
         """
-        self.db_config = db_config
+        self.db_config = db_config if db_config is not None else get_db_config()
         self.pool = None
         # MQTT integration
         self.mqtt_client = None
@@ -71,7 +73,7 @@ class PostgreDatabaseManager:
                 host=self.db_config.get('host', 'localhost'),
                 port=self.db_config.get('port', 5432),
                 database=self.db_config.get('database', 'hailo_db'),
-                user=self.db_config.get('user', 'hailo_user'),
+                user=self.db_config.get('user'),
                 password=self.db_config.get('password', '')
             )
             return pool
@@ -174,8 +176,10 @@ class PostgreDatabaseManager:
                 'track_id': int(det['track_id']) if 'track_id' in det and det['track_id'] else None,
             }
             detections.append(detection)
-            # Validate bounding box (skip for normalized coordinates)
-            self.insert_batch_detections(detections)
+            ## Validate bounding box (skip for normalized coordinates)
+            #self.insert_batch_detections(detections)
+        # Insert once, after the loop, so each detection is stored exactly once
+        self.insert_batch_detections(detections)
         #print(f"[DatabaseManager] Parsed detections: {detections}")                    
         print(f"[DatabaseManager] Parsed {len(payload['detections'])} detections from MQTT message")
         return detections
@@ -365,16 +369,9 @@ class PostgreDatabaseManager:
 # Example usage / test
 def test_database_manager():
     # Initialize your existing MQTT client
-    mqtt_client = MQTTPublisher( 
-        broker_host="mqtt.portabo.cz", 
-        broker_port=8883, 
-        topic="/videoanalyza", 
-        client_id = "partik_psql_test_listener",
-        username="videoanalyza", 
-        password="phdA9ZNW1vfkXdJkhhbP"
-    )
-    # Test configuration
-    config = { 'host': '192.168.37.31', 'port': 5432, 'database': 'hailo_db', 'user': 'hailo_user', 'password': 'hailo_pass', 'min_connections': 2, 'max_connections': 10 }
+    mqtt_client = MQTTPublisher(client_id="partik_psql_test_listener")
+    # Configuration is loaded from .env
+    config = get_db_config()
     try:
         # Initialize database manager (includes connection testing)
         db = PostgreDatabaseManager(config)
@@ -416,20 +413,13 @@ def test_database_manager():
             mqtt_client.disconnect()
 
 def main():
-    # Test configuration
-    config = { 'host': '192.168.37.31', 'port': 5432, 'database': 'hailo_db', 'user': 'hailo_user', 'password': 'hailo_pass', 'min_connections': 2, 'max_connections': 10 }
+    # Configuration is loaded from .env
+    config = get_db_config()
     try:
         # Initialize database manager (includes connection testing)
         db = PostgreDatabaseManager(config)
         # Initialize your existing MQTT client
-        mqtt_client = MQTTPublisher( 
-            broker_host="mqtt.portabo.cz", 
-            broker_port=8883, 
-            topic="/videoanalyza", 
-            client_id = "partik_psql_test_listener",
-            username="videoanalyza", 
-            password="phdA9ZNW1vfkXdJkhhbP"
-        )
+        mqtt_client = MQTTPublisher(client_id="partik_psql_test_listener")
         mqtt_client.client.user_data_set({"db": db})
         mqtt_client.client.on_message = mqtt_client.on_message
         # ConnecT to MQTT client

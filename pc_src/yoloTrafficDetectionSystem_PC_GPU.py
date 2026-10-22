@@ -12,7 +12,8 @@ import shlex
 from ultralytics import YOLO
 import torch
 from fastapi import WebSocket
-from MQTTClient import MQTTPublisher
+from common.MQTTClient import MQTTPublisher
+from common.config import get_camera_rtsp_url
 
 # PART 1: DETECTION CLASS
 class Detection:
@@ -736,7 +737,7 @@ class TrafficMonitoringPipeline:
         self.mqtt = None
         self.mqtt_enabled = mqtt_enabled
         if self.mqtt_enabled:
-            self.mqtt = MQTTPublisher(broker_host="mqtt.portabo.cz", broker_port=8883, topic="patrik/traffic_detection", client_id="PC_traffic_detection", username="videoanalyza", password="phdA9ZNW1vfkXdJkhhbP")
+            self.mqtt = MQTTPublisher(topic="patrik/traffic_detection", client_id="PC_traffic_detection")
         self.mqtt_publish_every_n_frames = 1
         # rtsp
         self.rtsp_out_enabled = rtsp_out_enabled
@@ -988,10 +989,10 @@ async def main():
     print("Press 'q' to exit")
     print()
     # Configuration for local testing (adjust resolution for your camera)
-    RTSP_URL    = "rtsp://admin:Dcuk.123456@192.168.37.99/Stream"  # ← your camera URL
+    # RTSP_URL = get_camera_rtsp_url()  # IP camera; set CAMERA_RTSP_URL in .env
     # VIDEO_SOURCE = 0
     VIDEO_SOURCE = "/home/patrik/videos/test_outputx264-202601091552_000.mp4"
-    #VIDEO_SOURCE = RTSP_URL
+    #VIDEO_SOURCE = get_camera_rtsp_url()
     CROP_RECT  : Optional[Tuple[int,int,int,int]] = (200, 80, 640, 640)  # (x,y,w,h) | None
     RESOLUTION = (640, 640)
     # roi rect

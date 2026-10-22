@@ -5,16 +5,21 @@ from datetime import datetime, timedelta
 from typing import List, Dict, Optional
 import threading
 import time
+from common.config import get_mqtt_config, get_mqtt_connect_timeout
 
 class MQTTPublisher:
-    """MQTT client for publishing detection data"""    
-    def __init__(self, broker_host="mqtt.portabo.cz", broker_port=8883, topic="patrik/traffic_detection", client_id="hailo_tracker", username="videoanalyza", password="phdA9ZNW1vfkXdJkhhbP", debug=False):
-        self.broker_host = broker_host
-        self.broker_port = broker_port
-        self.topic = topic
-        self.client_id = client_id
-        self.username = username
-        self.password = password
+    """
+    MQTT client for publishing detection data.
+    Any parameter left as None is taken from the .env file (see common/config.py).
+    """
+    def __init__(self, broker_host=None, broker_port=None, topic=None, client_id=None, username=None, password=None, debug=False):
+        cfg = get_mqtt_config()
+        self.broker_host = broker_host if broker_host is not None else cfg["broker_host"]
+        self.broker_port = broker_port if broker_port is not None else cfg["broker_port"]
+        self.topic = topic if topic is not None else cfg["topic"]
+        self.client_id = client_id if client_id is not None else cfg["client_id"]
+        self.username = username if username is not None else cfg["username"]
+        self.password = password if password is not None else cfg["password"]
         # Setup MQTT client
         self.client = mqtt.Client(client_id=self.client_id)
         self.client.username_pw_set(self.username, self.password)
@@ -72,7 +77,7 @@ class MQTTPublisher:
             self.client.connect(self.broker_host, self.broker_port, keepalive=60)
             self.client.loop_start()
             # Wait for connection
-            timeout = 10
+            timeout = get_mqtt_connect_timeout()
             start = time.time()
             while not self.connected and (time.time() - start) < timeout:
                 time.sleep(0.1)
@@ -177,14 +182,7 @@ class MQTTPublisher:
 # Test
 if __name__ == "__main__":
     # Create and connect client
-    client = MQTTPublisher(
-        broker_host="mqtt.portabo.cz", 
-        broker_port=8883, 
-        topic="/videoanalyza", 
-        client_id="traffic_detection_client_test", 
-        username="videoanalyza", 
-        password="phdA9ZNW1vfkXdJkhhbP"
-    )
+    client = MQTTPublisher(client_id="traffic_detection_client_test")
     client.connect()
     try:
         # Keep running and receiving messages
