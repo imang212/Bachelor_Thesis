@@ -7,8 +7,6 @@ from typing import List, Tuple, Optional, Dict, Any
 from collections import defaultdict
 import threading
 import time
-import subprocess
-import shlex
 from ultralytics import YOLO
 import torch
 from fastapi import WebSocket

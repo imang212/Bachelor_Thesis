@@ -21,3 +21,5 @@ pydantic>=2.12.4
 psycopg2-binary
 # MQTT
 paho-mqtt
+# Environment Variables
+python-dotenv
