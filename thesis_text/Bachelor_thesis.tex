@@ -240,11 +240,13 @@ V reakci na tyto potřeby a v rámci širšího rozvoje konceptu chytrých měst
 
 S překotným rozvojem výpočetních technologií a hardwarové miniaturizace se v této oblasti navíc stále více prosazuje přístup tzv. \acs{Edge AI} (umělá inteligence na okraji sítě). Zpracování rozsáhlých obrazových dat díky tomu již nemusí probíhat ve vzdálených datacentrech, ale je realizováno přímo na okrajových zařízeních v místě sběru dat. Využití kompaktních jednodeskových počítačů doplněných o specializované hardwarové AI akcelerátory umožňuje dramatické snížení latence, zvýšení ochrany citlivých osobních údajů a minimalizaci závislosti na stabilním internetovém připojení či cloudových službách. V dopravních aplikacích, kde je vyžadováno spolehlivé zpracování v reálném čase, je tento přístup zásadní.
 
-Cílem této bakalářské práce je navrhnout, implementovat a otestovat plně funkční systém pro automatické sčítání a analýzu dopravního provozu, postavený na principech \acs{Edge AI}. Práce se zaměřuje na detekci, sledování a klasifikaci různých účastníků provozu – primárně osobních automobilů, autobusů a nákladních vozidel, případně chodců v definované lokalitě s využitím moderních detekčních modelů pro víceobjektové sledování. Důraz je kladen na praktickou realizaci celého řešení na dostupném okrajovém zařízení a na následné vyhodnocení přesnosti detekce i sčítání z reálných videozáznamů dopravy.
+Cílem této bakalářské práce je navrhnout, implementovat a otestovat plně funkční systém pro automatické sčítání a analýzu dopravního provozu, postavený na principech \acs{Edge AI}. Práce se zaměřuje na detekci, sledování a klasifikaci různých účastníků provozu – primárně osobních automobilů, autobusů a nákladních vozidel, případně chodců a cyklistů v definované lokalitě s využitím moderních detekčních modelů pro víceobjektové sledování. Důraz je kladen na praktickou realizaci celého řešení na dostupném okrajovém zařízení a na následné vyhodnocení přesnosti detekce i sčítání z reálných videozáznamů dopravy.
 
 Text práce je strukturován do šesti hlavních kapitol. První, část teoretická poskytuje ucelený přehled v oblastech počítačového vidění, metod detekce a sledování objektů a existujících systémů pro monitorování dopravy. Následně se věnuje specifikům \acs{Edge AI} a etickým aspektům sběru dat. Druhá kapitola přibližuje celkový návrh architektury systému, včetně zdůvodnění výběru hardwarových komponent. Třetí kapitola detailně popisuje samotnou implementaci řešení od přípravy vývojového prostředí až po ukládání a vizualizaci nasbíraných dat. Čtvrtá a pátá kapitola jsou dedikovány testování systému v reálných scénářích, vyhodnocení přesnosti modelu a diskuzi nad dosaženými výsledky. Závěrečná kapitola pak shrnuje zjištěné poznatky a nastiňuje možnosti budoucího rozvoje vytvořené aplikace.
 
 \chapter{Teoretická část}
+
+% udělat popisek teoretické části, metody, co tam máme všechno.
 
 \section{Sledování a počítání objektů}
 Sledování objektů v obrazových sekvencích a videu představuje klíčovou nadstavbu nad samotnou detekcí objektů. Zatímco detekce umožňuje lokalizovat a klasifikovat objekty v jednotlivých izolovaných snímcích, sledování zajišťuje jejich konzistentní identifikaci napříč časem. Tato vlastnost je vysoce heterogenní a zásadní zejména v dopravních aplikacích, kde je pro komplexní analýzu nutné sledovat plynulý pohyb vozidel, určovat jejich trajektorie, rychlost nebo měřit přesný počet průjezdů daným úsekem komunikace~\cite{szeliski_computer_vision, zhou_traffic_survey_2024}.
@@ -576,6 +578,9 @@ Díky lokální a okamžité inferenci se žádný surový obrazový signál, vi
 Tento architektonický přístup bezezbytku naplňuje zásadu minimalizace osobních údajů, která je jedním z nosných a nejdůležitějších pilířů legislativy GDPR. Systém tak poskytuje plnohodnotná statistická data pro analýzu dopravy, aniž by jakýmkoliv způsobem zasahoval do soukromí účastníků provozu.
 
 \chapter{Návrh systému}
+
+% tady popsat, jak jsme systém navrhovali.
+
 \section{Požadavky na systém}
 Navrhovaný systém je určen pro automatizovanou analýzu silniční dopravy 
 pomocí metod počítačového vidění. Cílem je detekce a sledování vozidel 
@@ -602,6 +607,7 @@ Systém musí být schopen provozu v reálném čase na vestavěném zařízení
 
 Architektura systému je navržena jako vícevrstvá, distribuovaná a modulární. Jednotlivé komponenty jsou odděleny podle své funkce a komunikují spolu asynchronně prostřednictvím lehkého zprávového protokolu MQTT~\cite{mqtt_oasis_2019}. Toto rozdělení umožňuje lepší škálovatelnost, robustnost a minimalizaci vzájemné závislosti komponent, což plně odpovídá moderním architekturám dopravních monitorovacích systémů založených na počítačovém vidění~\cite{zhou_traffic_survey_2024}.
 
+% upravit návrh komunikace v šipky na obě dvě strany mezi moduly
 \begin{figure}[H]
     \centering
     \includegraphics[width=\textwidth]{images/architecture.png}
@@ -660,7 +666,10 @@ Detekční modul je založen na konvoluční neuronové síti typu YOLO, která 
 \textbf{Logika detekční zóny (ROI):}
 Pro účely filtrace a počítání relevantních vozidel je v obraze definována virtuální oblast zájmu (tzv. \textit{Region of Interest} - ROI) ve tvaru obecného polygonu~\cite{mdpi_roi_tracking_2022}. Polygonální reprezentace umožňuje přesně vymezit sledovaný jízdní pruh a odfiltrovat nežádoucí detekce mimo komunikaci. Započítání vozidla proběhne v okamžiku, kdy se geometrický střed jeho ohraničujícího rámečku (\textit{bounding box}) ocitne uvnitř definovaného polygonu. Aby nedocházelo k vícenásobnému započítání téhož vozidla v kolejnych snímcích, systém udržuje evidenci již zpracovaných identifikátorů \texttt{track\_id} a každé vozidlo odešle ke zpracování pouze jednou.
 
+% rozebrat to co mám popsané v závěru (posílání, zpracování dat)
+
 \subsection{Ukládání dat, databázové schéma a vizualizace}
+
 Strukturované detekční události jsou ukládány do relační databáze PostgreSQL, jež umožňují spolehlivé uchování dat a jejich následné statistické vyhodnocení~\cite{psycopg_docs_2025}. Pro účely trvalé evidence byla navržena primární tabulka \texttt{detections}, jejíž struktura je popsána v tabulce~\ref{fig:erd}. Každý zaznamenaný průjezd vozidla přes detekční linii vygeneruje právě jeden záznam.
 
 \subsubsection{Datový model}
@@ -734,6 +743,9 @@ Celkový přehled zvolených technologií pro jednotlivé vrstvy navržené arch
 %Ze získaných detekčních metadat se vytvoří slovník kam se uloží aktuální detekce. Publikace zprávy probíhá pouze v případě, že je seznam detekcí neprázdný a spojení s MQTT brokerem je aktivní. Tím je zajištěno, že do komunikační vrstvy nejsou odesílány redundantní nebo neúplné informace. Databázový modul je implementován jako samostatný MQTT subscriber, který přijímá publikované zprávy a ukládá je do relační databáze PostgreSQL. Tento přístup umožňuje oddělení real-time inference od operací zápisu do databáze, čímž je minimalizováno riziko zpomalení detekční části systému. Identifikátor \textit{track\_id} je označen jako zpracovaný až po úspěšném odeslání zprávy. Tím je zabráněno situaci, kdy by byla detekce považována za odeslanou, aniž by skutečně došlo k jejímu předání komunikační vrstvě.
 
 \chapter{Implementace systému}
+% i tady, co tu popíšeme
+% udělat do teoretický porovnámí yolov8 variant, čím a jak se liší, kolik používají vrstev atd, najít si zdroj.
+% existuje program v latechu s názvem vlna
 \section{Konfigurace prostředí a automatizace běhu}
 Pro praktickou realizaci systému na cílové platformě Raspberry Pi~5 byl nainstalován operační systém Raspberry Pi OS (založený na distribuci Debian Linux)~\cite{raspberrypi_docs_2024}, který poskytuje plnou podporu hardwarových rozhraní, dostupnost potřebných knihoven pro práci s obrazem a sítí a kompatibilitu s ovladači AI akcelerátoru Hailo-8. Řídicí skripty byly implementovány v jazyce Python~3.11~\cite{python_docs_313_2025}.
 %Implementace systému byla realizována v programovacím jazyce Python ve verzi 3.11 \cite{python_docs_313_2025}. 
@@ -1149,7 +1161,7 @@ Schopnost zpracovávat obrazový tok v reálném čase byla vyhodnocena na zákl
 Naměřené výsledky prokazují, že navržené Edge řešení s akcelerátorem Hailo-8 dosahuje průměrné propustnosti \textbf{29,39~FPS} (doba zpracování jednoho snímku 34,02~ms), čímž s výraznou rezervou splňuje teoretický požadavek na zpracování v reálném čase (definovaný v kapitole~1.5 jako latence pod 50~ms, tj. minimálně 20~FPS). Naproti tomu referenční řešení s výpočetně masivním modelem YOLOv11l a neoptimalizovanou smyčkou v knihovně OpenCV dosáhlo průměrné rychlosti \textbf{14,42~FPS} (69,35~ms na snímek).
 
 \textbf{Vliv AI akcelerátoru a GStreameru na vytížení CPU:}
-Zásadním přínosem integrace modulu Hailo-8 (26~TOPS) přes sběrnici PCIe je téměř úplné odlehčení hlavnímu procesoru ARM Cortex-A76 na desce Raspberry Pi~5. Zatímco samotný výpočet konvolučních vrstev modelu YOLOv8m pouze na CPU by vedl k 100\% vytížení všech jader a propadu snímkové frekvence na řádově 1 až 2~FPS, při využití akcelerátoru Hailo-8 a nativních C/C++ pluginů frameworku GStreamer se průměrné vytížení CPU pohybuje pouze v rozmezí 25 až 35~\%. Procesor tak obsluhuje pouze dekódování síťového RTSP streamu, geometrickou filtraci v knihovně Shapely a asynchronní odesílání JSON zpráv přes MQTT, což zajišťuje nízké zahřívání a dlouhodobou provozní stabilitu při zlomkové spotřebě elektrické energie oproti desktopovému GPU řešení.
+Zásadním přínosem integrace modulu Hailo-8 (26~TOPS) přes sběrnici PCIe je téměř úplné odlehčení hlavnímu procesoru ARM Cortex-A76 na desce Raspberry Pi~5. Zatímco samotný výpočet konvolučních vrstev modelu YOLOv8m pouze na CPU by vedl k 100\% vytížení všech jader a propadu snímkové frekvence na hodnoty 1 až 2~FPS, při využití akcelerátoru Hailo-8 a nativních C/C++ pluginů frameworku GStreamer se průměrné vytížení CPU pohybuje pouze v rozmezí 25 až 35~\%. Procesor tak obsluhuje pouze dekódování síťového RTSP streamu, geometrickou filtraci v knihovně Shapely a asynchronní odesílání JSON zpráv přes MQTT, což zajišťuje nízké zahřívání a dlouhodobou provozní stabilitu při zlomkové spotřebě elektrické energie oproti desktopovému GPU řešení.
 
 \chapter{Diskuze a prezentace výsledků}
 Experimentální vyhodnocení odhalilo klíčové kompromisy mezi nasazením systému na nízkoenergetické okrajové platformě (Edge AI) a provozem na výkonné grafické kartě (GPU).
@@ -1166,15 +1178,19 @@ Z pohledu praktického nasazení v reálné infrastruktuře chytrých měst pře
 
 \chapter{Závěr}
 %- Shrnutí dosažených cílů, Zhodnocení přínosu a praktické využitelnosti práce, Návrhy na další rozšíření a vylepšení.
-Cílem této bakalářské práce bylo navrhnout, implementovat a experimentálně ověřit komplexní systém pro automatizované monitorování a analýzu silniční dopravy v reálném čase, postavený na principech zpracování obrazu na okraji sítě (\textit{Edge AI}). Všechny stanovené cíle práce byly úspěšně splněny.
-
 V první části práce byla zpracována teoretická rešerše zaměřená na moderní jednofázové detekční architektury (zejména rodinu modelů YOLO), algoritmy víceobjektového sledování (SORT, DeepSORT, ByteTrack) a metody prostorového vyhodnocování průjezdů pomocí oblastí zájmu (ROI). Zvláštní pozornost byla věnována hardwarové akceleraci neuronových sítí na vestavěných zařízeních a dodržení legislativních požadavků GDPR prostřednictvím konceptu \textit{Privacy by Design}.
 
-V rámci praktické části byla navržena a implementována modulární vícevrstvá architektura systému. Pro výpočetní uzel na hraně sítě (Raspberry Pi~5 s AI akcelerátorem Hailo-8) byl model YOLOv8m exportován do formátu ONNX a následně pomocí nástroje Hailo Dataflow Compiler kvantizován do 8bitové přesnosti (INT8) a zkompilován do binárního formátu HEF. Zpracování živého RTSP video streamu z IP kamery bylo realizováno pomocí vysokoúrovňového řetězce v multimediálním frameworku GStreamer, doplněného o geometrickou filtraci průjezdů v polygonální ROI zóně s využitím knihovny Shapely. Pro přenos anonymizovaných detekčních metadat byl nasazen asynchronní protokol MQTT, na který navazuje databázová vrstva s relační databází PostgreSQL (využívající dávkové vkládání a indexaci časových řad), backendové REST API ve frameworku FastAPI a interaktivní analytický dashboard vytvořený pomocí nástrojů Streamlit a Plotly.
+V rámci praktické části, která se skládá z Návrhu a Implementace systému, byla navržena a implementována modulární vícevrstvá architektura systému. Tato architektura byla implementována na zařízení rpi5 s modulem Hailo a Notebooku s GPU od společnosti NVidia. Pro každé z těchto zařízení je potřeba připravit vhodný tvar neuronové síťě využité k detekci, rozpoznání a trakingu objektů. Pro výpočetní uzel (na hraně sítě) sestavený pomocí Raspberry Pi~5 s AI akcelerátorem Hailo-8 z důvodu, že model vyžaduje formát HEF pro hailo, byl model YOLOv8m exportován do formátu ONNX a následně pomocí nástroje Hailo Dataflow Compiler kvantizován do 8bitové přesnosti (INT8) a zkompilován do binárního formátu HEF. Pro zařízení s GPU NVidia s podporou CUDA není třeba žádné specifické transformace, neboť autoři knihovny exportují danou síť pro tento typ hardwaru. 
+
+Zpracování živého RTSP video streamu z IP kamery bylo realizováno pomocí vysokoúrovňového řetězce v multimediálním frameworku GStreamer, doplněného o geometrickou filtraci průjezdů v polygonální ROI zóně s využitím knihovny Shapely. 
+
+Pro přenos anonymizovaných detekčních metadat byl nasazen asynchronní protokol MQTT, na který navazuje databázová vrstva s relační databází PostgreSQL (využívající dávkové vkládání a indexaci časových řad), backendové REST API ve frameworku FastAPI a interaktivní analytický dashboard vytvořený pomocí nástrojů Streamlit a Plotly.
 
 Funkčnost a přesnost celého řešení byly ověřeny na reálném dopravním videozáznamu pořízeném za zhoršených zimních povětrnostních podmínek (sněžení) a porovnány s referenční implementací na grafické kartě (GPU) i manuálním sčítáním (\textit{ground truth}). Navržené Edge řešení s akcelerátorem Hailo-8 dosáhlo celkové poměrové přesnosti sčítání $\text{Accuracy}_{\text{count}} = 92{,}37~\%$ při plném zachování schopnosti zpracování v reálném čase a nízkém vytížení hlavního procesoru. Práce zároveň detailně analyzovala příčiny odchylek obou platforem – zejména vliv fragmentace stop (\textit{ghostingu}) u jednoduššího sledovacího modulu na straně Hailo a naopak zvýšenou míru mezitřídních záměn u méně zastoupených kategorií vozidel (\textit{Bus}, \textit{Truck}) na straně referenčního modelu.
 
 Hlavním praktickým přínosem práce je vytvoření plně autonomního, finančně dostupného a energeticky úsporného monitorovacího uzlu, který nevyžaduje přenos citlivého videozáznamu do cloudu a lze jej díky automatizačním skriptům okamžitě nasadit v reálné dopravní infrastruktuře.
+
+%Cílem této bakalářské práce bylo navrhnout, implementovat a experimentálně ověřit komplexní systém pro automatizované monitorování a analýzu silniční dopravy v reálném čase, postavený na principech zpracování obrazu na okraji sítě (\textit{Edge AI}). Všechny stanovené cíle práce byly úspěšně splněny.
 
 V budoucnu lze vytvořený systém dále rozšířit několika směry:
 \begin{itemize}
@@ -1182,7 +1198,6 @@ V budoucnu lze vytvořený systém dále rozšířit několika směry:
     \item \textbf{Pokročilá správa trajektorií a vektoru směru:} Rozšíření aplikační logiky v zóně ROI o vyhodnocování směrových vektorů pohybu (rozlišení vjezdů a výjezdů na jednotlivých ramenech křižovatky) a nasazení pokročilejšího sledovacího algoritmu přímo do GStreamer pipeline pro eliminaci ghostingu.
     \item \textbf{Horizontální škálování:} Využití připravených databázových atributů (\texttt{device\_name}, \texttt{model\_name}) pro zapojení většího počtu okrajových jednotek Raspberry Pi z různých lokalit města do jednoho centrálního analytického dashboardu.
 \end{itemize}
-
 
 \sloppy
 \printbibliography[title=Seznam použitých zdrojů]
