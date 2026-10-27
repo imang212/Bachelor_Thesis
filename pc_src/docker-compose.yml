@@ -1,0 +1,57 @@
+version: '3.8'
+
+services:
+  # 1. PostgreSQL Database
+  db:
+    image: postgres:15-alpine
+    container_name: traffic_postgres
+    restart: unless-stopped
+    env_file:
+      - ../.env
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-traffic_monitoring}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ../rpi_src/db/init_hailo.sql:/docker-entrypoint-initdb.d/init.sql:ro
+
+  # 2. PC Traffic Detection (CPU Mode - works on any PC without NVIDIA GPU)
+  detector-pc-cpu:
+    build:
+      context: ..
+      dockerfile: pc_src/Dockerfile
+    container_name: traffic_detector_cpu
+    profiles: ["cpu"]
+    env_file:
+      - ../.env
+    volumes:
+      - ../results:/app/results
+    depends_on:
+      - db
+
+  # 3. PC Traffic Detection (GPU Mode - requires NVIDIA Container Toolkit)
+  detector-pc-gpu:
+    build:
+      context: ..
+      dockerfile: pc_src/Dockerfile
+    container_name: traffic_detector_gpu
+    profiles: ["gpu"]
+    env_file:
+      - ../.env
+    volumes:
+      - ../results:/app/results
+    depends_on:
+      - db
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+volumes:
+  pgdata:

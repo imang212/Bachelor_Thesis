@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: traffic-detector-gpu
+  labels:
+    app: traffic-monitor
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: traffic-monitor
+  template:
+    metadata:
+      labels:
+        app: traffic-monitor
+    spec:
+      containers:
+      - name: yolo-gpu-detector
+        image: traffic-detector-pc:latest
+        imagePullPolicy: IfNotPresent
+        envFrom:
+        - secretRef:
+            name: traffic-env-secrets   # Created via: kubectl create secret generic traffic-env-secrets --from-env-file=.env
+        resources:
+          limits:
+            nvidia.com/gpu: 1           # Requests 1 NVIDIA GPU via k8s-device-plugin
