@@ -1,0 +1,105 @@
+# Deployment simulation: PostgreSQL + simulated camera + Hailo pipeline + API + dashboard.
+#
+# Run from the REPOSITORY ROOT (where the .env file lives):
+#   docker compose -f docker/docker-compose.yml --env-file .env up --build
+#
+# Paths in this file are relative to the file's location (the docker/ folder),
+# so the source code is referenced via "..". The only folder kept next to this file
+# is camera_simulator/ - put your test video there as sample_video.mp4
+# (*.mp4 files are ignored by git).
+
+version: "3.9"
+volumes:
+  postgres_data:
+services:
+  postgres:
+    image: postgres:15
+    container_name: hailo_db
+    environment:
+      # The postgres image creates the user and database from these variables;
+      # init_hailo.sql only creates the schema (tables, indexes)
+      POSTGRES_USER: ${DB_USER:?DB_USER is missing in .env}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is missing in .env}
+      POSTGRES_DB: ${DB_NAME:-hailo_db}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ../rpi_src/db/init_hailo.sql:/docker-entrypoint-initdb.d/init_hailo.sql:ro
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+  # RTSP server: the simulated camera publishes to it, the pipeline reads from it
+  rtsp_server:
+    image: bluenviron/mediamtx:1.9.3   # pin a verified version, avoid :latest
+    container_name: rtsp_server
+    ports:
+      - "8554:8554"
+  # Simulated camera: streams a video file in a loop to the RTSP server
+  camera_sim:
+    image: jrottenberg/ffmpeg:6.1-alpine   # pin a verified version
+    container_name: camera_simulator
+    depends_on:
+      - rtsp_server
+    restart: unless-stopped   # retries if the RTSP server is not ready yet
+    volumes:
+      - ./camera_simulator/sample_video.mp4:/video.mp4:ro
+    entrypoint: ["ffmpeg"]
+    # "-c copy" requires an H.264 video; otherwise re-encode by replacing "copy" with "libx264"
+    command: ["-re", "-stream_loop", "-1", "-i", "/video.mp4", "-c", "copy",
+              "-rtsp_transport", "tcp", "-f", "rtsp", "rtsp://rtsp_server:8554/mystream"]
+  
+  ai_pipeline:
+    build:
+      context: ..                          # repository root, so that common/ can be copied into the image
+      dockerfile: docker/Dockerfile.pipeline
+    container_name: detection_pipeline
+    depends_on:
+      - camera_sim
+    env_file: ../.env                      # MQTT and other settings
+    devices:
+      - "/dev/hailo0:/dev/hailo0"
+    command: python3 -m rpi_src.pipeline.DetectionWithGStreamer_pipeline --enable-mqtt --rtsp-link rtsp_server:8554/mystream
+   # Subscribes to the MQTT topic and stores the received detections in PostgreSQL
+  db_subscriber:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.api
+    container_name: hailo_db_subscriber
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file: ../.env
+    environment:
+      DB_HOST: postgres
+    command: python -m common.DatabaseManagerPostgre
+
+  api:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.api
+    container_name: hailo_api
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file: ../.env
+    environment:
+      DB_HOST: postgres                    # overrides the value from .env; inside Docker the DB host is "postgres"
+    ports:
+      - "8000:8000"
+    command: uvicorn rpi_src.pipeline.API_with_streamlit:app --host 0.0.0.0 --port 8000
+  dashboard:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.api
+    container_name: hailo_dashboard
+    depends_on:
+      - api
+    env_file: ../.env
+    environment:
+      DB_HOST: postgres
+    ports:
+      - "8501:8501"
+    command: streamlit run rpi_src/pipeline/API_with_streamlit.py --server.port 8501 --server.address 0.0.0.0
