@@ -1,0 +1,67 @@
+\chapter*{Seznam zkratek} 
+\addcontentsline{toc}{chapter}{Seznam zkratek} %
+\begin{acronym}[DeepSORT]
+    \acro{API}{Application Programming Interface (Aplikační programové rozhraní)}
+    \acro{ARM}{Advanced RISC Machine (Architektura energeticky úsporných procesorů)}
+    \acro{BCE}{Binary Cross-Entropy (Binární křížová entropie)}
+    \acro{CNN}{Convolutional Neural Network (Konvoluční neuronová síť)}
+    \acro{COCO}{Common Objects in Context (Standardizovaný dataset pro detekci objektů)}
+    \acro{CPU}{Central Processing Unit (Centrální procesorová jednotka)}
+    \acro{CSI}{Critical Success Index (Index kritické úspěšnosti detekce)}
+    \acro{DeepSORT}{Deep Simple Online and Realtime Tracking (Rozšíření algoritmu SORT o~hluboké učení)}
+    \acro{DFC}{Dataflow Compiler (Kompilační nástroj pro architekturu Hailo)}
+    \acro{Edge AI}{Edge Artificial Intelligence (Umělá inteligence na okraji sítě / lokální zpracování modelů na koncových zařízeních)}
+    \acro{ER}{Entity-Relationship (Entitně-relační datový model / diagram)}
+    \acro{FN}{False Negatives (Falešně negativní detekce / přehlédnuté objekty)}
+    \acro{FP}{False Positives (Falešně pozitivní detekce)}
+    \acro{FPS}{Frames Per Second (Počet zpracovaných snímků za sekundu)}
+    \acro{GDPR}{General Data Protection Regulation (Obecné nařízení o~ochraně osobních údajů)}
+    \acro{GFLOPs}{Giga Floating Point Operations Per Second (Miliardy operací v~plovoucí řádové čárce za sekundu)}
+    \acro{GPU}{Graphics Processing Unit (grafický procesor)}
+    \acro{GT}{Ground Truth (Referenční skutečná hodnota stanovená manuální anotací)}
+    \acro{HAR}{Hailo Archive (Meziformát archivu modelu před kvantizací)}
+    \acro{HEF}{Hailo Executable Format (Spustitelný binární formát modelu pro čipy Hailo)}
+    \acro{HTTP}{Hypertext Transfer Protocol (Hypertextový přenosový protokol)}
+    \acro{ID}{Identifier (Unikátní identifikátor sledovaného objektu)}
+    \acro{IoT}{Internet of Things (Internet věcí)}
+    \acro{IoU}{Intersection over Union (Metrika prostorového překryvu ohraničujících obdélníků)}
+    \acro{IP}{Internet Protocol (Internetový protokol pro přenos dat po síti)}
+    \acro{JSON}{JavaScript Object Notation (Textový formát pro výměnu strukturovaných dat)}
+    \acro{mAP}{Mean Average Precision (Střední průměrná přesnost detekčního modelu)}
+    \acro{MOT}{Multiple Object Tracking (Víceobjektové sledování)}
+    \acro{MQTT}{Message Queuing Telemetry Transport (Lehký protokol pro přenos zpráv v~IoT)}
+    \acro{NMS}{Non-Maximum Suppression (Algoritmus pro potlačení nemaximálních překrývajících se detekcí)}
+    \acro{NPU}{Neural Processing Unit (Neuronový procesor pro akceleraci umělé inteligence)}
+    \acro{ONNX}{Open Neural Network Exchange (Otevřený standardizovaný formát pro výměnu neuronových sítí)}
+    \acro{ONVIF}{Open Network Video Interface Forum (Globální standard pro komunikaci IP kamer)}
+    \acro{OOP}{Object-Oriented Programming (Objektově orientované programování)}
+    \acro{OS}{Operating System (Operační systém)}
+    \acro{PCIe}{Peripheral Component Interconnect Express (Vysokorychlostní počítačová sběrnice)}
+    \acro{PoE}{Power over Ethernet (Technologie pro napájení zařízení po datovém kabelu)}
+    \acro{PTQ}{Post-Training Quantization (Post-tréninková kvantizace vah neuronové sítě)}
+    \acro{R-CNN}{Region-based Convolutional Neural Network (Architektura dvoufázové detekce objektů)}
+    \acro{RAM}{Random Access Memory (operační paměť s~přímým přístupem)}
+    \acro{REST}{Representational State Transfer (Architektonický styl pro návrh webových rozhraní)}
+    \acro{RGB}{Red-Green-Blue (Aditivní barevný prostor složený z~červené, zelené a modré složky)}
+    \acro{ROI}{Region of Interest (Oblast zájmu / sledovaný výřez v~obraze)}
+    \acro{RTSP}{Real-Time Streaming Protocol (Síťový protokol pro přenos streamovaného videa)}
+    \acro{SORT}{Simple Online and Realtime Tracking (Algoritmus pro online sledování v~reálném čase)}
+    \acro{SQL}{Structured Query Language (Strukturovaný dotazovací jazyk pro relační databáze)}
+    \acro{SSD}{Single Shot MultiBox Detector (Architektura jednofázové detekce objektů)}
+    \acro{TN}{True Negatives (Správně negativní případy / zamítnuté pozadí)}
+    \acro{TOPS}{Tera Operations Per Second (Biliony výpočetních operací za sekundu)}
+    \acro{TP}{True Positives (Správně pozitivní detekce)}
+    \acro{UML}{Unified Modeling Language (Unifikovaný jazyk pro modelování softwarových systémů)}
+    \acro{YOLO}{You Only Look Once (Architektura jednofázové detekce objektů)}
+\end{acronym}
+
+\addchap{Úvod}
+Rostoucí intenzita dopravy představuje jednu z~hlavních výzev současných měst a aglomerací. Zvyšující se počet vozidel klade vysoké nároky nejen na propustnost samotné dopravní infrastruktury, ale také na bezpečnost silničního provozu a celkovou kvalitu života obyvatel. Efektivní řízení a plánování dopravy proto vyžaduje přesná, kontinuálně sbíraná a aktuální data. Tradiční metody získávání těchto dat, jako je například manuální sčítání dopravy, jsou však časově i personálně náročné a náchylné k~chybám. Vzniká tak silná potřeba automatizace celého procesu.
+
+V~reakci na tyto potřeby a v~rámci širšího rozvoje konceptu chytrých měst (z~angl. \textit{Smart Cities}) se jako vysoce efektivní řešení ukazuje využití moderních technologií. Klíčovým nástrojem se v~tomto kontextu stává počítačové vidění v~kombinaci s~umělou inteligencí. Kamerové systémy doplněné o~algoritmy strojového učení poskytují flexibilní a škálovatelné řešení pro automatizované sledování, vyhodnocování a predikci dopravních jevů. Jejich hlavní výhodou je možnost nasazení v~reálném prostředí stávajících komunikací bez nutnosti rozsáhlých a nákladných stavebních zásahů do infrastruktury.
+
+S~překotným rozvojem výpočetních technologií a hardwarové miniaturizace se v~této oblasti navíc stále více prosazuje přístup tzv. \acs{Edge AI} (umělá inteligence na okraji sítě). Zpracování rozsáhlých obrazových dat díky tomu již nemusí probíhat ve vzdálených datacentrech, ale je realizováno přímo na okrajových zařízeních v~místě sběru dat. Využití kompaktních jednodeskových počítačů doplněných o~specializované hardwarové AI akcelerátory umožňuje dramatické snížení latence, zvýšení ochrany citlivých osobních údajů a minimalizaci závislosti na stabilním internetovém připojení či cloudových službách. V~dopravních aplikacích, kde je vyžadováno spolehlivé zpracování v~reálném čase, je tento přístup zásadní.
+
+Cílem této bakalářské práce je navrhnout, implementovat a otestovat plně funkční systém pro automatické sčítání a analýzu dopravního provozu, postavený na principech \acs{Edge AI}. Práce se zaměřuje na detekci, sledování a klasifikaci různých účastníků provozu – primárně osobních automobilů, autobusů a nákladních vozidel, případně chodců a cyklistů v~definované lokalitě s~využitím moderních detekčních modelů pro víceobjektové sledování. Důraz je kladen na praktickou realizaci celého řešení na dostupném okrajovém zařízení a na následné vyhodnocení přesnosti detekce i sčítání z~reálných videozáznamů dopravy.
+
+Text práce je strukturován do šesti hlavních kapitol. První, teoretická část poskytuje ucelený přehled v~oblastech počítačového vidění, metod detekce a sledování objektů a existujících systémů pro monitorování dopravy. Následně se věnuje specifikům \acs{Edge AI} a etickým aspektům sběru dat. Druhá kapitola přibližuje celkový návrh architektury systému, včetně zdůvodnění výběru hardwarových komponent. Třetí kapitola detailně popisuje samotnou implementaci řešení od přípravy vývojového prostředí až po ukládání a vizualizaci nasbíraných dat. Čtvrtá a pátá kapitola jsou dedikovány testování systému v~reálných scénářích, vyhodnocení přesnosti modelu a diskuzi nad dosaženými výsledky. Závěrečná kapitola pak shrnuje zjištěné poznatky a nastiňuje možnosti budoucího rozvoje vytvořené aplikace.

@@ -1,31 +1,17 @@
-#FROM nvidia/cuda:12.1.1-cudnn8-runtime-ubuntu22.04
-#ENV DEBIAN_FRONTEND=noninteractive
-#RUN apt-get update && apt-get install -y \
-#    python3 \
-#    python3-pip \
-#    python3-dev \
-#    python3-paho-mqtt \
-#    ffmpeg \
-#    libsm6 \
-#    libxext6 \
-#    libglib2.0-0 \
-#    libgl1 \
-#    build-essential \
-#    git \
-#    curl \
-#    && rm -rf /var/lib/apt/lists/*
-#WORKDIR /app
-#COPY requirements.txt .
-#RUN pip3 install --upgrade pip \
-#    && pip3 install -r requirements.txt
-#COPY . .
-#CMD ["python3", "yoloTrafficDetectionSystem_PC_GPU.py"]
+## docker compose --profile gpu up --build
 # Use official Ultralytics image with CUDA support for GPU inference
 FROM ultralytics/ultralytics:8.3.0
 WORKDIR /app
 # Install system dependencies for PostgreSQL and OpenCV
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    libpq-dev gcc libgl1 libglib2.0-0 \
+RUN rm -f /etc/apt/sources.list.d/coral-edgetpu.list \
+    && grep -rl "coral-edgetpu" /etc/apt/sources.list.d/ /etc/apt/sources.list 2>/dev/null | xargs -r rm -f \
+    && apt-get update && apt-get install -y --no-install-recommends \
+       libpq-dev gcc libgl1 libglib2.0-0 \
+       pkg-config libcairo2-dev libgirepository1.0-dev \
+       python3-gi gir1.2-gst-rtsp-server-1.0 \
+       gstreamer1.0-tools \
+       gstreamer1.0-plugins-base gstreamer1.0-plugins-good \
+       gstreamer1.0-plugins-bad gstreamer1.0-libav \
     && rm -rf /var/lib/apt/lists/*
 # Copy and install Python requirements
 COPY pc_src/requirements.txt ./requirements.txt

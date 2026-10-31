@@ -1,0 +1,35 @@
+\chapter{Externí přílohy\label{sec:ep}}
+Zdrojové kódy navrženého systému, konfigurační skripty, kontejnerové definice, dokumentace architektury, vyexportované výsledky měření i samotný text této bakalářské práce jsou uloženy v~přiloženém elektronickém archivu (a verzovány v~repozitáři systému Git). Struktura hlavních adresářů a souborů je popsána v~tabulce~\ref{tab:repo_structure}.
+
+\begin{table}[H]
+    \centering
+    \renewcommand{\arraystretch}{1.2}
+    \begin{tabular}{|l|p{12.6cm}|}
+        \hline
+        \textbf{Cesta v~úložišti} & \textbf{Popis obsahu a funkce} \\ \hline
+        \texttt{common/} & Sdílený Python balíček obsahující centralizované načítání konfigurace z~proměnných prostředí (\texttt{config.py}), správu databázového poolu PostgreSQL a komunikačního MQTT klienta. \\ \hline
+        \texttt{rpi\_src/} & Zdrojové kódy pro okrajové zařízení Raspberry Pi~5 s~akcelerátorem Hailo-8 (GStreamer pipeline v~\texttt{pipeline/}, FastAPI backend, Streamlit dashboard, kompilace modelů v~\texttt{model\_compile/}, SQL inicializace v~\texttt{db/} a kontejnerová simulace v~\texttt{docker}). \\ \hline
+        \texttt{pc\_src/} & Skripty pro referenční vyhodnocení na osobním počítači s~GPU (Ultralytics YOLO, OpenCV, ByteTrack) včetně definice kontejnerového nasazení (\texttt{Dockerfile}, \texttt{docker-compose.yml}). \\ \hline
+        \texttt{results/} & Výstupní data z~experimentálního testování, telemetrické a statistické soubory ve formátu JSON (\texttt{hailo\_statistics.json}, \texttt{gpu\_stats.json}) a obrazové výstupy. \\ \hline
+        \texttt{tests/} & Sada automatizovaných jednotkových testů (\texttt{pytest}) ověřujících konfigurační logiku, geometrickou filtraci zóny ROI a sdílené moduly. \\ \hline
+        \texttt{docs/} & Technická dokumentace projektu obsahující architektonická schémata a zdrojové definice UML diagramů tříd a sekvenčních diagramů (ve formátu Mermaid). \\ \hline
+        \texttt{thesis\_text/} & Zdrojové kódy textu bakalářské práce v~systému \LaTeX{} (\texttt{Bachelor\_thesis\_CS.tex}), rozdělené kapitoly (\texttt{chapters/}), bibliografie (\texttt{references.bib}), grafické přílohy (\texttt{images/}) a složka s~prostudovanou literaturou (\texttt{thesis\_literature\_resources/}). \\ \hline
+        \texttt{.env.example} & Šablona konfiguračního souboru pro nastavení proměnných prostředí (databáze, MQTT broker, RTSP stream) bez citlivých hesel. \\ \hline
+    \end{tabular}
+    \caption{Struktura přiloženého elektronického úložiště projektu.}
+    \label{tab:repo_structure}
+\end{table}
+
+%V této kapitole stačí uvést pouze základní strukturu úložiště (co se kde nalézá a jakou má funkci) například v podobě tabulky. 
+%\begin{longtable}{ll}
+%\hline
+%ki-thesis.pdf & text práce v PDF \\
+%ki-thesis.tex & zdrojový kód práce v \LaTeX{}u \\
+%kitheses.cls & definice třídy dokumentů (rozšířená třída \texttt{scrbook} \\
+%thesis.bib & bibliografická databáze (exportována z citace.com) \\
+%LOGO\_PRF\_CZ\_RGB\_standard.jpg  & logo fakulty s českým textem \\
+%LOGO\_PRF\_EM\_RGB\_standard.jpg  & logo fakulty s anglickým textem  \\
+%\hline
+%\end{longtable}
+
+%Všechny tyto soubory jsou potřeba pro překlad dokumentu (logo stačí jedno v příslušné jazykové verzi).

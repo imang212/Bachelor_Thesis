@@ -12,13 +12,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
 from datetime import datetime
-from contextlib import asynccontextmanager
 from time import sleep
 import threading
 from pathlib import Path
     
-from DatabaseManagerPostgre import PostgreDatabaseManager
-from MQTTClient import MQTTPublisher
+from common.DatabaseManagerPostgre import PostgreDatabaseManager
+from common.MQTTClient import MQTTPublisher
 from ServoControl import ContinuousServo
 try:
     from pipeline.DetectionWithGStreamer_pipeline import HailoTrackerPipeline

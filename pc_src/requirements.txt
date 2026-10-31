@@ -5,13 +5,11 @@ ultralytics>=8.3.230
 torch
 torchvision
 torchaudio
-# Web Framework & API
-fastapi>=0.121.3
-uvicorn[standard]>=0.38.0
-websockets>=15.0.1
 # Computer Vision
 av
 opencv-python>=4.12.0.88
+pycairo<1.27
+PyGObject<3.51
 # Numerical
 numpy
 filterpy>=1.4.5

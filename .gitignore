@@ -13,7 +13,6 @@ __pycache__/
 **/calib_dataset/
 **/calib_dataset_npy/
 rpi_src/model_compile/calib_dataset_npy.zip
-videos/
 diagram_convert.py
 architecture.mmd
 rpi_src/model_compile/hailo_dataflow_compiler-3.33.0-py3-none-linux_x86_64.whl

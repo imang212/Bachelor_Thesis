@@ -1,7 +1,7 @@
 import paho.mqtt.client as mqtt
 import json
 import ssl
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import List, Dict, Optional
 import threading
 import time

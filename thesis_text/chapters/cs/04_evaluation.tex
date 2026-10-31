@@ -1,0 +1,164 @@
+\chapter{Testování a vyhodnocení}
+Zatímco v~reálném nasazení na zařízení Raspberry Pi~5 pracuje navržený systém v~nepřetržitém režimu, kde v~reálném čase odesílá detekční události přes protokol MQTT do databáze a vizualizačního dashboardu, pro účely měření přesnosti sčítání a provozních vlastností bylo provedeno offline vyhodnocení nad zaznamenaným dopravním videem.
+%Pro vyhodnocení navrženého systému byla použita stejná video sekvence zachycující dopravní situaci za špatných zimních a povětrnostních podmínek (sněžení). Byla analyzována čtyřminutová část videa, která byla zvolena jako reprezentativní z delšího záznamu. 
+
+\section{Testovací scénáře a metodické vymezení experimentu}
+Pro experimentální vyhodnocení byla použita přibližně čtyřminutová video sekvence zachycující reálnou dopravní situaci na okružní křižovatce za zhoršených zimních povětrnostních podmínek (husté sněžení, snížený kontrast a mokrá vozovka). Pro stanovení referenční hodnoty (\textit{ground truth}, GT) byla všechna projíždějící vozidla a chodci v~této sekvenci nejprve manuálně spočítáni a klasifikováni lidským pozorovatelem, přičemž bylo zaznamenáno celkem \textbf{118 reálných objektů} (108 osobních automobilů, 3 autobusy, 6 nákladních vozidel a 1 chodec).
+
+Aby bylo dosaženo metodicky korektního a přímého srovnání obou platforem, byla dopravní scéna analyzována s~využitím \textbf{totožné architektury neuronové sítě (YOLOv8m)}, shodného prostorového ořezu vstupního obrazu ($640 \times 640$~px) a identické polygonální oblasti zájmu (ROI) na dvou hardwarových a softwarových konfiguracích:
+
+\begin{itemize}
+    \item \textbf{Edge řešení (Raspberry Pi~5 + Hailo-8):} Detekce probíhala na cílovém okrajovém zařízení s~AI akcelerátorem Hailo-8 (26~TOPS), post-tréninkově kvantizovaným modelem YOLOv8m v~8bitové celočíselné aritmetice (INT8, binární formát HEF) a sledovacím modulem \texttt{hailotracker} v~rámci nativní GStreamer pipeline.
+    \item \textbf{Referenční GPU řešení (PC + NVIDIA GeForce RTX~2050):} Detekce byla realizována na přenosném počítači Acer Nitro~V~15 vybaveném dedikovanou grafickou kartou s~podporou CUDA v~nekvantizované přesnosti (FP32/FP16) s~využitím knihovny Ultralytics, téhož modelu YOLOv8m (\texttt{yolov8m.pt}) a sledovacího algoritmu ByteTrack.
+\end{itemize}
+
+\textbf{Sjednocení parametrů a metodická specifika srovnání:}
+Při návrhu srovnávacího experimentu byly sjednoceny klíčové hyperparametry detekce i prostorové filtrace, přičemž u~výsledků je třeba zohlednit tři architektonická specifika obou prostředí:
+\begin{enumerate}
+    \item \textit{Kvantizace vah (INT8 vs. FP32/FP16) a nastavení prahů:} Obě platformy využívají stejnou síť YOLOv8m se sjednoceným prahem spolehlivosti pro zakládání stop ($0{,}60$) a prahem překryvu NMS ($\text{IoU} = 0{,}50$). Rozdíl ve výsledcích tak přímo odráží vliv 8bitové kvantizace na čipu Hailo-8 oproti plné přesnosti na GPU v~kombinaci se sledovacím algoritmem (\texttt{hailotracker} vs. dvoufázové párování ByteTrack s~pamětí \texttt{track\_buffer = 50} snímků).
+    \item \textit{Identická polygonální geometrie ROI:} Na obou platformách byla pomocí knihovny Shapely aplikována shodná pětiúhelníková oblast zájmu definovaná normalizovanými vrcholy $[(0{,}10;\,0{,}85), (0{,}46;\,0{,}85), (0{,}60;\,0{,}90), (0{,}45;\,0{,}90), (0{,}40;\,1{,}00)]$. Polygon přesně kopíruje perspektivu měřeného jízdního pruhu na výjezdu z~okružní křižovatky a eliminuje falešné detekce mimo vozovku, avšak objekty pohybující se po přilehlém chodníku vně vymezeného polygonu (1 chodec v~celkovém GT) jsou na obou platformách geometrickým filtrem odfiltrovány.
+    \item \textit{Správa vyrovnávacích front při čtení souboru (4\,957 vs. 5\,113 snímků):} Oběma systémům byl předložen totožný zdrojový video soubor o~celkovém počtu 5\,113 snímků (odpovídající cca 255,6~s~při 20~FPS). Zatímco referenční GPU implementace využívající bezztrátovou blokující frontu (\texttt{queue.Queue}) zpracovala všech 5\,113 snímků, nativní GStreamer pipeline na Raspberry Pi~5 analyzovala 4\,957 snímků. Rozdíl 156 snímků ($\sim 3{,}05~\%$ délky záznamu) je způsoben prvkem \texttt{queue leaky=downstream max-size-buffers=5} před modulem \texttt{hailofilter}, který je v~architektuře GStreameru navržen pro živé RTSP streamování a při nárazovém čtení z~lokálního souboru (\texttt{filesrc}) zahazuje mezisnímky při zaplnění fronty.
+\end{enumerate}
+
+\section{Vyhodnocení přesnosti detekce a matice záměn}
+Pro posouzení kvality detekce byly z~vyexportovaných telemetrických souborů ve složce \texttt{results/} (pro okrajový akcelerátor Hailo-8 a~referenční \acs{GPU}) byly analyzovány celkové počty hrubých snímkových detekcí uvnitř zóny ROI, průměrné míry spolehlivosti (\textit{average confidence}) a odvozené složky matice záměn vůči ručně stanovenému počtu 118 objektů.
+
+Z~hlediska míry spolehlivosti (\textit{confidence score}) jednotlivých snímkových predikcí dosáhly obě platformy s~modelem YOLOv8m velmi vyrovnaných výsledků, jak dokládá tabulka~\ref{tab:confidence_stats}. Vážený průměr spolehlivosti napříč všemi detekovanými snímky činil \textbf{0,7730} u~akcelerátoru Hailo-8 (nevážený průměr detekovaných tříd vozidel \textbf{0,7415}) a \textbf{0,7414} u~referenčního GPU řešení (nevážený průměr tříd vozidel \textbf{0,7307}). Mírně nižší vážený průměr a nižší počet hrubých snímkových detekcí na GPU (3\,732 oproti 4\,780 na Hailo-8) souvisí s~druhou fází algoritmu ByteTrack, která při zákrytech v~hustém sněžení udržuje existující stopy i pomocí detekcí s~nižším skóre spolehlivosti, zatímco u~kvantizovaného modelu na Hailo-8 docházelo při rozpadu stopy k~opakovanému generování nových detekčních záznamů.
+
+\begin{table}[H]
+    \centering
+    \small\renewcommand{\arraystretch}{1.2}
+    \setlength{\tabcolsep}{3pt}
+    \begin{tabular}{|l|c|c|c|c|}
+        \hline
+        \textbf{Třída} & \textbf{Snímkové det. (Hailo)} & \textbf{Prům. conf. (Hailo)} & \textbf{Snímkové det. (GPU)} & \textbf{Prům. conf. (GPU)} \\ \hline
+        \textbf{Car} & 4\,349 & 0,7787 & 3\,283 & 0,7485 \\ \hline
+        \textbf{Bus} & 127 & 0,7400 & 111 & 0,7860 \\ \hline
+        \textbf{Truck} & 304 & 0,7057 & 338 & 0,6577 \\ \hline
+        \textbf{Person} & 0 & -- & 0 & -- \\ \hline \hline
+        \textbf{Celkem} & \textbf{4\,780} & \textbf{0,7415 (váž. 0,7730)} & \textbf{3\,732} & \textbf{0,7307 (váž. 0,7414)} \\ \hline
+    \end{tabular}
+    \caption{Přehled celkového počtu snímkových detekcí v~zóně ROI a průměrné míry spolehlivosti (confidence) modelu YOLOv8m dle JSON logů.}
+    \label{tab:confidence_stats}
+\end{table}
+
+\textbf{Aproximace matice záměn na úrovni unikátních objektů:}
+Vzhledem k~tomu, že testovací video nedisponuje snímkovou (\textit{frame-by-frame}) anotací souřadnic všech ohraničujících obdélníků, nebylo možné provést exaktní prostorové párování jednotlivých trajektorií pomocí metriky $\text{IoU}$ a Maďarského algoritmu (jaké využívají standardy MOTA či IDF1). Matice záměn v~tabulce~\ref{tab:confusion_matrix} je proto odvozena \textbf{makroskopicky (aritmeticky)} z~koncových počtů unikátních započítaných stop za jednotlivé třídy: hodnota $\text{TP} = \min(\text{GT}, N_{\text{sys}})$ udává počet pokrytých objektů dané třídy, $\text{FP} = \max(0, N_{\text{sys}} - \text{GT})$ přebytečné (falešné či duplicitní) detekce a $\text{FN} = \max(0, \text{GT} - N_{\text{sys}})$ chybějící detekce při $\text{TN} = 0$. Toto zjednodušení představuje metodické omezení, neboť případná situace, kdy by v~rámci téže třídy jedno reálné vozidlo nebylo detekováno vůbec a jiné bylo kvůli fragmentaci stopy započítáno dvakrát, se v~součtu třídy navzájem vykompenzuje.
+
+\begin{table}[H]
+    \centering
+    \renewcommand{\arraystretch}{1.2}
+    \begin{tabular}{|l|c||c|c|c||c|c|c|}
+        \hline
+         & & \multicolumn{3}{c||}{\textbf{Edge řešení (Hailo-8)}} & \multicolumn{3}{c|}{\textbf{Referenční GPU řešení}} \\ \hline
+        \textbf{Třída objektu} & \textbf{Ruční (GT)} & \textbf{TP} & \textbf{FP} & \textbf{FN} & \textbf{TP} & \textbf{FP} & \textbf{FN} \\ \hline
+        \textbf{Car} & 108 & 108 & 12 & 0 & 101 & 0 & 7 \\ \hline
+        \textbf{Bus} & 3 & 3 & 1 & 0 & 3 & 1 & 0 \\ \hline
+        \textbf{Truck} & 6 & 3 & 0 & 3 & 6 & 0 & 0 \\ \hline
+        \textbf{Person} & 1 & 0 & 0 & 1 & 0 & 0 & 1 \\ \hline \hline
+        \textbf{Celkem} & \textbf{118} & \textbf{114} & \textbf{13} & \textbf{4} & \textbf{110} & \textbf{1} & \textbf{8} \\ \hline
+    \end{tabular}
+    \caption{Aritmeticky odvozená matice záměn (TP, FP, FN) pro unikátní sledované objekty s~modelem YOLOv8m vůči referenčnímu sčítání (GT = 118).}
+    \label{tab:confusion_matrix}
+\end{table}
+
+Z~agregovaných složek této makroskopické matice záměn ($\text{TP}_{\text{Hailo}}=114, \text{FP}_{\text{Hailo}}=13, \text{FN}_{\text{Hailo}}=4$ pro celkem 127 detekcí Hailo-8 a $\text{TP}_{\text{GPU}}=110, \text{FP}_{\text{GPU}}=1, \text{FN}_{\text{GPU}}=8$ pro celkem 111 detekcí GPU) byly vypočítány orientační sčítací metriky:
+
+\begin{itemize}
+    \item \textbf{Precision (Přesnost):} $\text{Precision} = \frac{\text{TP}}{\text{TP} + \text{FP}}$
+    \begin{itemize}
+        \item \textit{Edge řešení (Hailo-8):} $\frac{114}{114 + 13} = \frac{114}{127} = \mathbf{89{,}76~\%}$
+        \item \textit{Referenční GPU řešení:} $\frac{110}{110 + 1} = \frac{110}{111} = \mathbf{99{,}10~\%}$
+    \end{itemize}
+    \item \textbf{Recall (Úplnost):} $\text{Recall} = \frac{\text{TP}}{\text{TP} + \text{FN}}$
+    \begin{itemize}
+        \item \textit{Edge řešení (Hailo-8):} $\frac{114}{114 + 4} = \frac{114}{118} = \mathbf{96{,}61~\%}$
+        \item \textit{Referenční GPU řešení:} $\frac{110}{110 + 8} = \frac{110}{118} = \mathbf{93{,}22~\%}$
+    \end{itemize}
+    \item \textbf{F1-skóre (Harmonický průměr Precision a Recall):} $\text{F1} = \frac{2 \cdot \text{TP}}{2 \cdot \text{TP} + \text{FP} + \text{FN}}$
+    \begin{itemize}
+        \item \textit{Edge řešení (Hailo-8):} $\frac{228}{228 + 13 + 4} = \frac{228}{245} = \mathbf{93{,}06~\%}$
+        \item \textit{Referenční GPU řešení:} $\frac{220}{220 + 1 + 8} = \frac{220}{229} = \mathbf{96{,}07~\%}$
+    \end{itemize}
+    \item \textbf{Detekční Accuracy (Critical Success Index při $\text{TN}=0$):} $\text{Accuracy} = \frac{\text{TP}}{\text{TP} + \text{FP} + \text{FN}}$
+    \begin{itemize}
+        \item \textit{Edge řešení (Hailo-8):} $\frac{114}{114 + 13 + 4} = \frac{114}{131} = \mathbf{87{,}02~\%}$
+        \item \textit{Referenční GPU řešení:} $\frac{110}{110 + 1 + 8} = \frac{110}{119} = \mathbf{92{,}44~\%}$
+    \end{itemize}
+\end{itemize}
+
+\section{Vyhodnocení přesnosti sčítání a klasifikace}
+Navazujícím krokem bylo vyhodnocení celkové provozní přesnosti sčítání dopravy pomocí poměrové metriky $\text{Accuracy}_{\text{count}}$, definované v~teoretické části práce vztahem:
+\[
+\text{Accuracy}_{\text{count}} = \left(1 - \frac{|N_{\text{real}} - N_{\text{sys}}|}{N_{\text{real}}}\right) \cdot 100~[\%]
+\]
+kde $N_{\text{real}}$ představuje skutečný počet objektů dle manuální anotace ($\text{GT} = 118$) a $N_{\text{sys}}$ celkový počet unikátních objektů (\texttt{unique\_objects\_tracked}) zaznamenaných systémem. Porovnání výsledků pro jednotlivé třídy i celkový součet uvádí tabulka~\ref{tab:counting_results}.
+
+\begin{table}[H]
+    \centering
+    \small\renewcommand{\arraystretch}{1.2}
+    \setlength{\tabcolsep}{3pt}
+    \begin{tabular}{|l|c|c|c|c|c|}
+        \hline
+        \textbf{Třída objektu} & \textbf{Ruční (GT)} & \textbf{Hailo-8 (Edge)} & \textbf{GPU (Ref.)} & \textbf{Odchylka Hailo} & \textbf{Odchylka GPU} \\ \hline
+        \textbf{Car} (osobní vůz) & 108 & 120 & 101 & $+12$ & $-7$ \\ \hline
+        \textbf{Bus} (autobus) & 3 & 4 & 4 & $+1$ & $+1$ \\ \hline
+        \textbf{Truck} (nákladní vůz) & 6 & 3 & 6 & $-3$ & $0$ \\ \hline
+        \textbf{Person} (chodec) & 1 & 0 & 0 & $-1$ & $-1$ \\ \hline \hline
+        \textbf{Celkem ($N$)} & \textbf{118} & \textbf{127} & \textbf{111} & $\mathbf{+9}$ & $\mathbf{-7}$ \\ \hline
+        \textbf{$\text{Accuracy}_{\text{count}}$} & \textbf{100,00~\%} & \textbf{92,37~\%} & \textbf{94,07~\%} & -- & -- \\ \hline
+    \end{tabular}
+    \caption{Porovnání počtu započítaných unikátních objektů s~referenční hodnotou (ground truth) při sjednocené konfiguraci modelu YOLOv8m.}
+    \label{tab:counting_results}
+\end{table}
+
+Při interpretaci výsledků v~tabulce~\ref{tab:counting_results} je patrné, že po sjednocení detekčního modelu (YOLOv8m) a polygonální oblasti zájmu dosahují obě platformy vysoké a vzájemně velmi blízké přesnosti, avšak vykazují opačné znaménko odchylky:
+
+\begin{enumerate}
+    \item \textbf{Celkový počet vozidel ($\text{Accuracy}_{\text{count}}$):} V~celkovém součtu všech detekovaných objektů dosáhlo referenční \textbf{GPU řešení přesnosti 94,07~\%} (111 detekovaných objektů oproti 118 skutečným, odchylka $-7$ objektů) a \textbf{Edge řešení s~akcelerátorem Hailo-8 přesnosti 92,37~\%} (127 detekovaných objektů, odchylka $+9$ objektů). Rozdíl mezi nekvantizovaným modelem na GPU a 8bitově kvantizovaným modelem na okrajovém čipu Hailo-8 činí pouhých \textbf{1,70 procentního bodu}, což potvrzuje minimální degradaci přesnosti při přechodu na architekturu Edge AI.
+    
+    \item \textbf{Chování na dominantní třídě \textit{Car} (Ghosting vs. podhodnocení při přísném prahu):} U~nejpočetnější kategorie osobních automobilů (\textit{Car}, $\text{GT}=108$) zaznamenalo GPU řešení 101 vozidel ($\text{Accuracy}_{\text{count}(\text{Car})} = 93{,}52~\%$, odchylka $-7$), zatímco řešení Hailo-8 napočítalo 120 vozidel ($\text{Accuracy}_{\text{count}(\text{Car})} = 88{,}89~\%$, odchylka $+12$). Na straně GPU v~kombinaci s~algoritmem ByteTrack a vysokým prahem pro založení nové stopy (\texttt{new\_track\_thresh = 0.60}) nedocházelo k~falešnému štěpení stop ($\text{FP}=0$), avšak 7 osobních vozidel projíždějících v~hustém sněžení či v~zákrytu nepřekročilo během průjezdu polygonem 60\% práh spolehlivosti pro inicializaci stopy. Naopak u~čipu Hailo-8 vedlo drobné kolísání rozměrů kvantizovaných INT8 ohraničujících rámečků při zákrytu za sloupem veřejného osvětlení k~dočasnému poklesu překryvu $\text{IoU}$ v~modulu \texttt{hailotracker} a následnému přidělení nového \texttt{track\_id} témuž vozidlu (tzv. \textit{ghosting}).
+    
+    \item \textbf{Konzistence u~tříd \textit{Bus}, \textit{Truck} a \textit{Person}:} V~kategorii autobusů (\textit{Bus}, $\text{GT}=3$) dosáhly obě platformy identického výsledku 4 detekovaných vozidel (odchylka $+1$). V~kategorii nákladních vozidel (\textit{Truck}, $\text{GT}=6$) dosáhla nekvantizovaná síť YOLOv8m na GPU 100\% shody (6 ze 6 vozidel), zatímco kvantizovaný model na Hailo-8 zaznamenal 3 nákladní vozy (zbývající 3 menší nákladní vozy či dodávky byly v~důsledku 8bitové kvantizace klasifikovány do obecné třídy \textit{Car}, což současně vysvětluje část nárůstu v~této třídě). Chodec pohybující se po chodníku mimo vymezený pětiúhelníkový polygon ROI nebyl ani na jedné platformě započítán ($\text{FN}=1$), což dokládá 100\% geometrickou shodu prostorové filtrace obou skriptů.
+\end{enumerate}
+
+\section{Vyhodnocení výkonnosti systému}
+%dosažené FPS, latence, využití CPU, vliv akcelerátoru
+
+Provozní parametry obou implementací byly vyhodnoceny na základě telemetrických logů vygenerovaných po dokončení analýzy záznamů (tabulka~\ref{tab:performance_eval}). Díky odstranění umělého časového brzdění (\textit{throttlingu}) u~obou souborových vstupů a nasazení stejného modelu \textbf{YOLOv8m} o~vstupním rozlišení $640 \times 640$~px odrážejí naměřené hodnoty reálnou výpočetní propustnost obou softwarových řetězců:
+
+\begin{itemize}
+    \item Na \textbf{Edge platformě (Raspberry Pi~5 + Hailo-8)} zpracovala nativní C/C++ GStreamer pipeline 4\,957 snímků za \textbf{168,65~s}, čímž dosáhla průměrné propustnosti \textbf{29,39~FPS} (průměrná doba zpracování snímku \textbf{34,02~ms}).
+    \item Na \textbf{referenční GPU platformě (NVIDIA GeForce RTX~2050)} zpracovala asynchronní Python pipeline všech 5\,113 snímků za \textbf{199,43~s}, což odpovídá průměrné propustnosti \textbf{25,64~FPS} (průměrná doba zpracování snímku \textbf{39,00~ms}).
+\end{itemize}
+
+\begin{table}[H]
+    \centering
+    \small\renewcommand{\arraystretch}{1.2}
+    \setlength{\tabcolsep}{4pt}
+    \begin{tabular}{|l|c|c|}
+        \hline
+        \textbf{Měřený parametr} & \textbf{Edge (RPi 5 + Hailo-8)} & \textbf{Referenční GPU (RTX 2050)} \\ \hline
+        Použitý detekční model & YOLOv8m (INT8, HEF) & YOLOv8m (FP32/FP16, PT) \\ \hline
+        Rozlišení vstupního tenzoru & $640 \times 640$~px & $640 \times 640$~px \\ \hline
+        Sledovací algoritmus a ROI & \texttt{hailotracker} + Polygon & ByteTrack + Polygon \\ \hline
+        Celkový počet zpracovaných snímků & 4\,957 & 5\,113 \\ \hline
+        Snímky s~detekcí v~ROI & 3\,594 (72,5~\%) & 3\,205 (62,7~\%) \\ \hline
+        Celková doba běhu (\texttt{processing\_time}) & 168,65~s~& 199,43~s~\\ \hline
+        Průměrná propustnost (\textbf{FPS}) & \textbf{29,39~FPS} & \textbf{25,64~FPS} \\ \hline
+        Průměrná doba zpracování snímku ($\text{FPS}^{-1}$) & $\sim$34,02~ms & $\sim$39,00~ms \\ \hline
+        Využití CPU (Raspberry Pi 5) & 25--35~\% & -- \\ \hline
+        Typický příkon celé sestavy & $\sim$8--12~W & $> 100$~W \\ \hline
+    \end{tabular}
+    \caption{Přehled provozních parametrů obou testovacích běhů s~modelem YOLOv8m dle telemetrických JSON logů.}
+    \label{tab:performance_eval}
+\end{table}
+
+\textbf{Analýza propustnosti a rozlišení od koncové (end-to-end) latence:}
+Z~naměřených dat vyplývá pozoruhodný výsledek: nízkoenergetický okrajový uzel Raspberry Pi~5 s~akcelerátorem Hailo-8 dosáhl vyšší celkové propustnosti (\textbf{29,39~FPS}, krok pipeline 34,02~ms) než dedikovaná grafická karta v~přenosném počítači (\textbf{25,64~FPS}, krok pipeline 39,00~ms). Příčinou je architektonický rozdíl v~obsluze multimediálního toku. Zatímco na platformě Hailo-8 probíhá dekódování, ořez, škálování, 8bitová inference i H.264 enkódování ve zřetězených C/C++ vláknech frameworku GStreamer s~přímým předáváním paměťových bufferů, v~referenční Python pipeline na PC vzniká režie při převodu snímků z~knihovny PyAV do polí NumPy, vykreslování v~OpenCV a synchronním zápisu výstupního MP4 souboru přes \texttt{cv2.VideoWriter}. Obě platformy nicméně s~výraznou rezervou překonávají stanovený požadavek na propustnost v~reálném čase (definovaný v~kapitole~1.5 jako minimálně 20~FPS, tj. průměrná doba zpracování snímku pod 50~ms).
+
+Z~architektonického hlediska je však nutné od této převrácené hodnoty propustnosti ($\text{FPS}^{-1} = 34{,}02~\text{ms}$) striktně odlišit celkovou \textit{end-to-end latenci} živého přenosu (zpoždění mezi fyzickým dějem před objektivem IP kamery a vygenerováním MQTT události). Při živém RTSP streamování obsahuje prvek \texttt{rtspsrc} síťovou vyrovnávací paměť nastavenou na \texttt{latency=150} (150~ms) pro kompenzaci kolísání sítě (\textit{jitteru}), takže celková přenosová a výpočetní latence živého kanálu se pohybuje kolem 185--200~ms, přičemž díky režimu \texttt{leaky=downstream} a parametru \texttt{batch-size=1} tato hodnota v~čase dále nenarůstá.
+
+\textbf{Vliv AI akcelerátoru a GStreameru na vytížení CPU:}
+Zásadním přínosem integrace modulu Hailo-8 (26~TOPS) přes sběrnici PCIe je téměř úplné odlehčení hlavnímu procesoru ARM Cortex-A76 na desce Raspberry Pi~5. Zatímco samotný výpočet konvolučních vrstev modelu YOLOv8m pouze na CPU by vedl k~100\% vytížení všech jader a propadu snímkové frekvence na řádově 1 až 2~FPS, při využití akcelerátoru Hailo-8 a nativních C/C++ pluginů frameworku GStreamer se průměrné vytížení CPU pohybuje pouze v~rozmezí 25 až 35~\%. Procesor tak obsluhuje pouze dekódování síťového RTSP streamu, geometrickou filtraci v~knihovně Shapely a asynchronní odesílání JSON zpráv přes MQTT, což zajišťuje nízké zahřívání a dlouhodobou provozní stabilitu při zlomkové spotřebě elektrické energie ($\sim 8\text{--}12~\text{W}$).
+

@@ -1,0 +1,219 @@
+\documentclass[male,czech,api_bc]{kitheses}
+\usepackage{ifthen}
+
+\usepackage{amsmath,amssymb}
+\usepackage{graphics}
+\usepackage{color}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{afterpage}
+\usepackage{microtype}  
+
+\usepackage{graphicx}
+\usepackage{float}
+
+\iftutex
+\else
+\usepackage{etoolbox}
+\makeatletter
+\newcommand\my@hsyphen{-}
+\newcommand\my@apostroph{'}
+\patchcmd\select@language{-}{\my@hyphen }{}{}
+\patchcmd\select@language{'}{\my@apostroph }{}{}
+\makeatother
+\fi
+
+\iftutex
+	\usepackage{fontspec}  
+	\setmainfont{Libertinus Serif}
+	\setsansfont{Libertinus Sans}
+	\setmonofont[Scale=MatchLowercase]{Source Code Pro}
+	\usepackage{unicode-math}
+	\setmathfont{Libertinus Math}
+\else
+	\usepackage[utf8]{inputenc} 
+	\usepackage[T1]{fontenc}
+	\usepackage{libertinus}
+	\renewcommand{\ttdefault}{pxtt}
+\fi
+
+\usepackage{csquotes} 
+\usepackage[style=iso-numeric,shortnumeration=true]{biblatex}
+\addbibresource{references.bib}
+
+
+\usepackage{listings}
+\usepackage{xcolor}
+\lstset{ %
+  language=Python,              
+  basicstyle=\small\ttfamily,    
+  backgroundcolor=\color{white},
+  showspaces=false,             
+  showstringspaces=false,       
+  showtabs=false, 
+  frame=single,   
+  tabsize=3,                    
+  breaklines=true,              
+  breakatwhitespace=false, 
+  keywordstyle=\bfseries\color{blue},       
+  commentstyle=\rmfamily\color{gray},       
+  stringstyle=\itshape\color{teal},   
+}
+\usepackage{acronym} % \usepackage[printonlyused]{acronym}
+
+\newcommand{\nazevcz}{Systém pro monitorování a analýzu dopravy pomocí počítačového vidění}   
+\newcommand{\nazeven}{System for Traffic Monitoring and Analysis using Computer Vision}     
+\newcommand{\autor}{Patrik Poklop}           
+\newcommand{\rok}{\the\year}                
+\newcommand{\vedouci}{Ing. Roman Vaibar Ph.D., MBA}         
+\newcommand{\vedouciDAT}{Ing. Romanu Vaibarovi, Ph.D., MBA}
+% zvětšuje o 23% vertikální okraje v tabulkách
+\renewcommand{\arraystretch}{1.23}
+% nastavení pro záhlaví (co nelze udělat v cls souboru)
+\renewcommand{\chaptermark}[1]{\markboth{\arabic{chapter}. #1}{}}
+\pagestyle{fancy}
+% nastavení odkazů
+\usepackage{url} % formátování URL, příkaz \url
+%\usepackage{varioref} % lepší interní odkazy na obrázky, apod. příkaz \vref
+%\usepackage{cleveref}
+\usepackage[unicode=true,pdfusetitle,
+ bookmarks=true,
+ breaklinks=false,pdfborder={0 0 1},backref=false,colorlinks=false]{hyperref} % hypertextové odkazy v PDF
+\newcommand{\UV}[1]{\quotedblbase#1\textquotedblleft}
+% odstraňte pokud vám vadí absence zarovnání dole 
+\raggedbottom
+
+\begin{document}
+
+\thispagestyle{empty}
+\begin{center}
+{
+\LARGE
+\univerzita\\[16pt]
+\fakulta
+}
+
+\vspace{2cm}
+\resizebox{8.42cm}{!}{%
+\ifthenelse{\boolean{czech}}
+{\includegraphics{LOGO_PRF_CZ_RGB_standard.jpg}}
+{\includegraphics{LOGO_PRF_EN_RGB_standard.jpg}}}
+
+\vspace{2cm}
+{
+\Huge\sffamily
+\nazevcz\par
+\vspace{0.6cm}
+\Large\scshape \ifthenelse{\boolean{bc}}{bakalářská}{diplomová} práce
+}
+\end{center} 
+ 
+\vfill
+{
+\large
+\begin{tabular}{>{\bfseries}rl}
+    Vypracoval: 	& \autor\\
+    Vedoucí práce: 	& \vedouci\\
+&\\
+Studijní program:       & \program\\
+\ifthenelse{\boolean{api}}{Studijní obor:          & Api\\}{}
+\end{tabular} 
+}
+\vspace{1.5cm}
+\begin{center}
+  \Large\scshape   Ústí nad Labem \rok
+\end{center}
+
+\cleardoublepage
+\thispagestyle{empty}
+\pagecolor{yellow}
+{\Large Namísto žlutých stránek vložte digitálně podepsané zadání kvalifikační práce poskytnuté vedoucím katedry.\\\
+Zadání musí zaujímat právě dvě strany.
+}
+
+Zadání je nutno vložit jako PDF pomocí některého nástroje, který umožňuje editaci dokumentů (se zachováním
+elektronického podpisu).
+
+V~Linuxe lze například použít příkaz \texttt{pdftk}.
+
+\clearpage
+\thispagestyle{empty}
+\afterpage{\nopagecolor}
+~
+\clearpage
+
+\thispagestyle{empty} 
+{\bfseries Prohlášení}
+
+\vspace{0.5cm}
+Prohlašuji, že jsem tuto \ifthenelse{\boolean{bc}}{bakalářskou}{diplomovou} práci vypracoval\ifthenelse{\boolean{feminum}}{a}{}
+samostatně a použil\ifthenelse{\boolean{feminum}}{a}{}
+jen pramenů, které cituji a uvádím v~přiloženém seznamu literatury.
+
+\vspace{0.5em}
+
+Byl\ifthenelse{\boolean{feminum}}{a}{} jsem seznámen\ifthenelse{\boolean{feminum}}{a}{} 
+s~tím, že se na moji práci vztahují práva a povinnosti vyplývající ze
+zákona č. 121/2000 Sb., ve znění zákona č. 81/2005 Sb., autorský zákon, zejména se
+skutečností, že Univerzita Jana Evangelisty Purkyně v~Ústí nad Labem má právo na uzavření
+licenční smlouvy o~užití této práce jako školního díla podle § 60 odst. 1 autorského zákona, a
+s~tím, že pokud dojde k~užití této práce mnou nebo bude poskytnuta licence o~užití jinému
+subjektu, je Univerzita Jana Evangelisty Purkyně v~Ústí nad Labem oprávněna ode mne
+požadovat přiměřený příspěvek na úhradu nákladu, které na vytvoření díla vynaložila, a to
+podle okolností až do jejich skutečné výše.
+
+\vspace{2em}
+
+V~Ústí nad Labem dne \today   \hfill Podpis: \makebox[4cm][s]{\dotfill}
+
+\cleardoublepage
+\thispagestyle{empty}
+~
+\vfill
+
+\begin{flushright}
+    Děkuji vedoucímu práce {\vedouciDAT}\\ 
+    za neocenitelné rady a pomoc při tvorbě bakalářské práce.
+\end{flushright}
+
+\cleardoublepage
+
+\textsc{\nazevcz}
+
+\textbf{Abstrakt:}
+
+%Tato bakalářská práce se zabývá návrhem, implementací a vyhodnocením systému pro monitorování a analýzu dopravy pomocí metod počítačového vidění. Cílem práce je vytvořit funkční prototyp zařízení schopného v reálném čase analyzovat videozáznam z dopravní lokality, detekovat a klasifikovat účastníky provozu, jako jsou vozidla, chodci a cyklisté, a zaznamenávat jejich průjezdy a průchody definovanou oblastí. Navržený systém je realizován na platformě Raspberry Pi s využitím AI akcelerátoru a moderních detekčních modelů. Součástí práce je také softwarová aplikace pro ukládání a vizualizaci získaných dat. Funkčnost a přesnost systému jsou ověřeny pomocí experimentů v reálném prostředí a porovnáním s manuálním pozorováním.
+Tato bakalářská práce se zabývá návrhem, implementací a vyhodnocením systému pro monitorování a analýzu silniční dopravy pomocí metod počítačového vidění. Cílem práce je vytvořit funkční prototyp zařízení schopného v~reálném čase analyzovat videozáznam z~dopravní lokality, detekovat a klasifikovat účastníky provozu (primárně osobní automobily, autobusy a nákladní vozidla, případně chodce) a zaznamenávat jejich průjezdy definovanou oblastí zájmu (ROI). Navržený systém je realizován na platformě Raspberry Pi 5 s~využitím dedikovaného AI akcelerátoru Hailo-8 a moderních detekčních modelů rodiny YOLO. Součástí práce je také softwarová aplikace pro ukládání záznamů do relační databáze a jejich interaktivní vizualizaci. Funkčnost, výpočetní výkon a přesnost systému jsou ověřeny pomocí experimentů nad reálným dopravním záznamem za zhoršených povětrnostních podmínek a porovnány s~referenčním řešením na grafické kartě (GPU) i manuálním pozorováním.
+
+\textbf{Klíčová slova:} počítačové vidění, monitorování dopravy, detekce objektů, Edge AI, Raspberry Pi
+
+\bigskip
+
+\textsc{\nazeven}
+
+\textbf{Abstract:}
+%This bachelor’s thesis focuses on the design, implementation, and evaluation of a system for traffic monitoring and analysis using computer vision methods. The aim of the thesis is to develop a functional prototype capable of real-time video analysis of a traffic scene, including detection and classification of traffic participants such as vehicles, pedestrians, and cyclists, and counting their movements across a defined area. The proposed system is implemented on the Raspberry Pi platform using an AI accelerator and modern object detection models. The thesis also includes the development of a software application for data storage and visualization. The functionality and accuracy of the system are verified through experiments conducted in real-world conditions and by comparison with manual observations.
+
+This bachelor's thesis focuses on the design, implementation, and evaluation of a road traffic monitoring and analysis system using computer vision methods. The aim of the thesis is to develop a functional prototype capable of real-time video analysis of a traffic scene, including the detection and classification of traffic participants (primarily passenger cars, buses, and trucks, as well as pedestrians) and counting their movements across a defined region of interest (ROI). The proposed system is implemented on the Raspberry Pi 5 platform using the Hailo-8 AI accelerator and modern YOLO object detection models. The thesis also includes the development of a software application for relational database storage and interactive data visualization. The functionality, computational performance, and accuracy of the system are verified through experiments on real-world winter traffic footage and evaluated against both a reference GPU implementation and manual ground truth observations.
+
+\textbf{Keywords:} computer vision, traffic monitoring, object detection, Edge AI, Raspberry Pi
+
+\tableofcontents
+\clearpage
+
+\newcommand{\lang}{cs}
+
+\input{chapters/\lang/00_abbreviations_and_intro}
+\input{chapters/\lang/01_theory}
+\input{chapters/\lang/02_system_design}
+\input{chapters/\lang/03_implementation}
+\input{chapters/\lang/04_evaluation}
+\input{chapters/\lang/05_discussion}
+\input{chapters/\lang/06_conclusion}
+\sloppy
+\printbibliography[title=Seznam použitých zdrojů]
+\appendix
+\input{chapters/\lang/07_appendices}
+
+\end{document}
+
