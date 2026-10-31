@@ -3,7 +3,7 @@ import subprocess
 # Váš upravený mermaid diagram
 mermaid_code = '''graph LR
     subgraph "Raspberry Pi (Edge)"
-        AI["Detection Module</br> (Python + GStreamer)"]
+        AI["Detection Module</br>(Python + GStreamer)"]
     end
     
     subgraph "Network interface"
@@ -11,12 +11,12 @@ mermaid_code = '''graph LR
     end
     
     subgraph "MQTT Server"
-        MQTT["MQTT Broker</br> (mqtt.portabo.cz)"]
+        MQTT["MQTT Broker"]
     end
 
     subgraph "Backend"
-        DB[(Database)]
-        DBListener["Data module<br> (MQTT subscriber)"]
+        DB["Database</br>(PostgreSQL)"]
+        DBListener["Data module<br>(MQTT subscriber)"]
         FastAPI[FastAPI Server]
     end
 
@@ -25,11 +25,11 @@ mermaid_code = '''graph LR
     end
     
     Camera -->|RTSP stream| AI
-    AI -->|sending| MQTT
-    DBListener --> |listen| MQTT
-    DBListener -->|saving| DB
-    FastAPI -->|reading| DB
-    Streamlit -->|POST/GET| FastAPI
+    AI -->|sending JSON| MQTT
+    DBListener <--> |listen / publish| MQTT
+    DBListener -->|writing batch| DB
+    FastAPI <-->|query / reading| DB
+    Streamlit <-->|POST / GET| FastAPI
     
     style AI fill:#90EE90
     style Camera fill:#87CEEB

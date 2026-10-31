@@ -1,0 +1,26 @@
+\chapter{Závěr}
+%- Shrnutí dosažených cílů, Zhodnocení přínosu a praktické využitelnosti práce, Návrhy na další rozšíření a vylepšení.
+V~první části práce byla zpracována teoretická rešerše zaměřená na moderní jednofázové detekční architektury (zejména rodinu modelů YOLO a porovnání jejích velikostních variant), algoritmy víceobjektového sledování (SORT, DeepSORT) a metody prostorového vyhodnocování průjezdů pomocí oblastí zájmu (ROI). Zvláštní pozornost byla věnována hardwarové akceleraci neuronových sítí na vestavěných zařízeních a dodržení legislativních požadavků GDPR prostřednictvím konceptu \textit{Privacy by Design}.
+
+V~rámci praktické části, která se skládá z~návrhu a~implementace systému, byla vytvořena modulární vícevrstvá architektura pro monitorování dopravy. Tato architektura byla realizována na okrajovém zařízení Raspberry Pi~5 s~\acs{AI} akcelerátorem Hailo-8 (26~\acs{TOPS}) a~současně na referenčním přenosném počítači s~grafickou kartou NVIDIA GeForce RTX~2050. Pro každé z~těchto zařízení bylo nutné připravit vhodnou reprezentaci neuronové sítě využité k~detekci, klasifikaci a~sledování objektů.
+
+V~rámci praktické části, která se skládá z~Návrhu a Implementace systému, byla navržena a implementována modulární vícevrstvá architektura systému pro monitorování dopravy. Tato architektura byla realizována na okrajovém zařízení Raspberry Pi~5 s~AI akcelerátorem Hailo-8 (26~TOPS) a současně na referenčním přenosném počítači s~grafickou kartou NVIDIA GeForce RTX~2050. Pro každé z~těchto zařízení je potřeba připravit vhodný tvar neuronové sítě využité k~detekci, klasifikaci a rozpoznávání objektů. Pro zajištění objektivního srovnání byl na obou platformách nasazen totožný detekční model \textbf{YOLOv8m}. Pro výpočetní uzel na hraně sítě byl model exportován do meziformátu ONNX a pomocí nástroje Hailo Dataflow Compiler post-tréninkově kvantizován do 8bitové přesnosti (INT8) a zkompilován do binárního formátu HEF, zatímco na GPU s~podporou CUDA pracoval model v~plné přesnosti (FP32/FP16).
+
+Zpracování obrazového toku na okrajovém zařízení bylo realizováno pomocí vysokoúrovňového řetězce v~multimediálním frameworku GStreamer, doplněného o~geometrickou filtraci průjezdů v~polygonální ROI zóně s~využitím knihovny Shapely. 
+
+Pro přenos anonymizovaných detekčních metadat byl nasazen asynchronní protokol MQTT, na který navazuje databázová vrstva s~relační databází PostgreSQL (využívající fond spojení a dávkové vkládání), backendové REST API ve frameworku FastAPI a interaktivní analytický dashboard vytvořený pomocí nástrojů Streamlit a Plotly. 
+
+Součástí práce je rovněž kontejnerizace v~prostředí Docker umožňující snadnou replikaci a simulaci systému.
+
+Funkčnost, propustnost a přesnost celého řešení byly ověřeny na reálném dopravním videozáznamu pořízeném za zhoršených zimních povětrnostních podmínek (husté sněžení) při shodném nastavení prahových hodnot i polygonu ROI vůči manuálnímu sčítání (\textit{ground truth}, 118 objektů). Navržené Edge řešení s~akcelerátorem Hailo-8 dosáhlo celkové poměrové přesnosti sčítání \textbf{$\text{Accuracy}_{\text{count}} = 92{,}37~\%$} (127 detekovaných objektů) a průměrné propustnosti \textbf{29,39~FPS} (34,02~ms na snímek) při vytížení procesoru pouze 25--35~\%. Referenční GPU řešení se stejným modelem YOLOv8m dosáhlo srovnatelné propustnosti \textbf{25,64~FPS} (39,00~ms na snímek) a poměrové přesnosti \textbf{$94{,}07~\%$} (111 detekovaných objektů). Experiment tak prokázal, že přechod na 8bitově kvantizovaný model na úsporném čipu Hailo-8 přináší vyšší snímkovou propustnost a řádově nižší spotřebu energie ($\sim 8\text{--}12~\text{W}$) při zanedbatelném rozdílu v~přesnosti sčítání ($1{,}70$ procentního bodu).
+
+Hlavním praktickým přínosem práce je vytvoření plně autonomního, finančně dostupného a energeticky úsporného monitorovacího uzlu, který nevyžaduje přenos citlivého videozáznamu do cloudu a lze jej díky automatizačním a kontejnerovým skriptům okamžitě nasadit v~reálné dopravní infrastruktuře.
+
+%Cílem této bakalářské práce bylo navrhnout, implementovat a experimentálně ověřit komplexní systém pro automatizované monitorování a analýzu silniční dopravy v reálném čase, postavený na principech zpracování obrazu na okraji sítě (\textit{Edge AI}). Všechny stanovené cíle práce byly úspěšně splněny.
+
+V~budoucnu lze vytvořený systém dále rozšířit několika směry:
+\begin{itemize}
+    \item \textbf{Vlastní dotrénování modelu (\textit{fine-tuning}):} Dotrénování modelu YOLOv8m na specifickém lokálním datasetu z~českých komunikací v~zimních podmínkách za účelem zvýšení jistoty detekce částečně zakrytých vozidel a eliminace občasných záměn mezi dodávkami a osobními automobily.
+    \item \textbf{Pokročilá správa trajektorií a vektoru směru:} Rozšíření aplikační logiky v~zóně ROI o~vyhodnocování směrových vektorů pohybu (rozlišení vjezdů a výjezdů na jednotlivých ramenech křižovatky) a zpřesnění filtrace kandidátních stop pro potlačení efektu ghostingu.
+    \item \textbf{Horizontální škálování:} Využití připravených databázových atributů (\texttt{device\_name}, \texttt{model\_name}) pro zapojení většího počtu okrajových jednotek Raspberry Pi z~různých lokalit města do jednoho centrálního analytického dashboardu.
+\end{itemize}
