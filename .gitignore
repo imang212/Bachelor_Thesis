@@ -7,6 +7,7 @@ __pycache__/
 *.pt
 *.onnx
 *.mp4
+!videos/sample_video.mp4
 *.avi
 **/coco_full/
 **/hailo_env/

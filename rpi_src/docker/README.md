@@ -1,51 +1,36 @@
 # Docker deployment simulation
 
-Runs the whole traffic-detection system as a set of containers: a simulated IP camera,
-the Hailo detection pipeline, a PostgreSQL database, a service that stores MQTT
-detections in the database, the FastAPI backend and the Streamlit dashboard.
+Runs the whole traffic-detection system as a set of containers: a simulated IP camera streaming `/videos/sample_video.mp4`, the Hailo detection pipeline, a PostgreSQL database, a service that stores MQTT detections in the database, the FastAPI backend, and the Streamlit dashboard.
 
-All commands below are run from the **repository root**, because that is where the
-`.env` file lives. Paths inside `docker-compose.yml` are relative to the `docker/`
-folder, so the source code is referenced through `..`.
+All commands below are run from the **repository root**, because that is where the `.env` file and the `videos/` folder live. Paths inside `rpi_src/docker/docker-compose.yml` are relative to the `rpi_src/docker/` folder, so the repository root is referenced through `../..`.
 
 ## Architecture
 
 ```
- camera_sim ──RTSP──▶ rtsp_server ──RTSP──▶ ai_pipeline ──MQTT (TLS)──▶ external broker
- (ffmpeg, loops       (mediamtx)            (GStreamer + Hailo-8)               │
-  sample_video.mp4)                                                             │ subscribe
-                                                                                ▼
- dashboard ──HTTP──▶ api ──SQL──▶ postgres ◀──SQL── db_subscriber ◀────────────┘
- (Streamlit :8501)   (FastAPI :8000)   (:5432)      (MQTT → database)
+    camera_sim ──RTSP──▶ rtsp_server ──RTSP──▶ ai_pipeline ──MQTT (TLS)──▶ external broker
+    (ffmpeg, loops       (mediamtx)            (GStreamer + Hailo-8)               │
+     sample_video.mp4)                                                             │ subscribe
+                                                                                   ▼
+    dashboard ──HTTP──▶ api ──SQL──▶ postgres ◀──SQL── db_subscriber ◀─────────────┘
+    (Streamlit :8501)   (FastAPI :8000)   (:5432)      (MQTT → database)
 ```
 
-The MQTT broker is **not** part of this compose file. Both `ai_pipeline` (publisher)
-and `db_subscriber` (subscriber) connect to the same external broker defined in `.env`.
 
 ## Services
 
-| Service         | Container             | Image / build                 | Port  | Purpose |
-|-----------------|-----------------------|-------------------------------|-------|---------|
-| `postgres`      | `hailo_db`            | `postgres:15`                 | 5432  | Detection database, schema created from `rpi_src/db/init_hailo.sql` |
-| `rtsp_server`   | `rtsp_server`         | `bluenviron/mediamtx`         | 8554  | RTSP server the simulated camera publishes to |
-| `camera_sim`    | `camera_simulator`    | `jrottenberg/ffmpeg`          | –     | Streams `camera_simulator/sample_video.mp4` in a loop as `rtsp://rtsp_server:8554/mystream` |
-| `ai_pipeline`   | `detection_pipeline`  | `docker/Dockerfile.pipeline`  | –     | GStreamer + Hailo detection and tracking, publishes detections to MQTT |
-| `db_subscriber` | `hailo_db_subscriber` | `docker/Dockerfile.api`       | –     | Subscribes to the MQTT topic and stores detections in PostgreSQL |
-| `api`           | `hailo_api`           | `docker/Dockerfile.api`       | 8000  | FastAPI backend (REST + WebSocket) |
-| `dashboard`     | `hailo_dashboard`     | `docker/Dockerfile.api`       | 8501  | Streamlit dashboard |
+| Service | Container | Image / Build | Port | Purpose |
+|---|---|---|---|---|
+| `postgres` | `hailo_db` | `postgres:15` | 5432 | Detection database, schema created from `rpi_src/db/init_hailo.sql` |
+| `rtsp_server` | `rtsp_server` | `bluenviron/mediamtx:1.9.3` | 8554 | RTSP server the simulated camera publishes to |
+| `camera_sim` | `camera_simulator` | `jrottenberg/ffmpeg:6.1-alpine` | – | Streams `videos/sample_video.mp4` in a loop as `rtsp://rtsp_server:8554/mystream` |
+| `ai_pipeline` | `detection_pipeline` | `rpi_src/docker/Dockerfile.pipeline` | – | GStreamer + Hailo detection and tracking, publishes detections to MQTT |
+| `db_subscriber` | `hailo_db_subscriber` | `rpi_src/docker/Dockerfile.api` | – | Subscribes to the MQTT topic and stores detections in PostgreSQL |
+| `api` | `hailo_api` | `rpi_src/docker/Dockerfile.api` | 8000 | FastAPI backend (REST + WebSocket) |
+| `dashboard` | `hailo_dashboard` | `rpi_src/docker/Dockerfile.api` | 8501 | Streamlit dashboard |
 
-## Requirements
-
-- Docker Engine with the Compose plugin (`docker compose`, v2).
-- For `ai_pipeline`: a Raspberry Pi 5 (arm64) with a Hailo-8 / AI HAT+ and the HailoRT
-  driver installed on the host, so that the device `/dev/hailo0` exists
-  (see `rpi_src/auto_setup_repair_hailo_rpi5.sh`).
-- A reachable MQTT broker (TLS) and its credentials.
-
-Without Hailo hardware you can still start the rest of the stack, see
-[Running without Hailo](#running-without-hailo).
 
 ## Setup
+
 
 ### 1. Configure `.env`
 
@@ -70,33 +55,29 @@ simulated camera is used.
 > `docker compose ... down -v`.
 
 ### 2. Add a test video
+The default test video is located in the root folder at `videos/sample_video.mp4` and is automatically mounted into the `camera_sim` container or put a video file into the `videos/` folder and name it `sample_video.mp4`:
 
-Put a video file into the `camera_simulator/` folder and name it `sample_video.mp4`:
-
-```
-docker/camera_simulator/sample_video.mp4
-```
 
 The video must be **H.264**, because the camera simulator copies the stream without
 re-encoding (`-c copy`). For other codecs replace `copy` with `libx264` in the
 `camera_sim` command. Video files are ignored by git.
 
-### 3. Build and start
-
+3. **Build and start all containers from the repository root:**
 ```bash
-docker compose -f docker/docker-compose.yml --env-file .env up --build
+       docker compose -f rpi_src/docker/docker-compose.yml --env-file .env up --build
 ```
-
 Add `-d` to run in the background.
 
-## Access
+4. **Run without physical Hailo-8 hardware (simulation mode on any PC):**
+```bash
+       docker compose -f rpi_src/docker/docker-compose.yml --env-file .env up --build postgres rtsp_server camera_sim db_subscriber api dashboard
+```
 
-| What                      | Address                                    |
-|---------------------------|--------------------------------------------|
-| Streamlit dashboard       | http://localhost:8501                      |
-| FastAPI Swagger UI        | http://localhost:8000/docs                 |
-| Simulated camera (RTSP)   | `rtsp://localhost:8554/mystream`           |
-| PostgreSQL                | `localhost:5432` (or `POSTGRES_PORT`)      |
+## Access Endpoints
+- **Streamlit Dashboard:** `http://localhost:8501`
+- **FastAPI Swagger UI:** `http://localhost:8000/docs`
+- **Simulated Camera (RTSP):** `rtsp://localhost:8554/mystream`
+- **PostgreSQL Database:** `localhost:5432`
 
 ### Check the simulated camera stream
 

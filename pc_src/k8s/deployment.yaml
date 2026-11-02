@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - name: yolo-gpu-detector
-        image: traffic-detector-pc:latest
+        image: traffic-detector-pc:1.0.0
         imagePullPolicy: IfNotPresent
         envFrom:
         - secretRef:
