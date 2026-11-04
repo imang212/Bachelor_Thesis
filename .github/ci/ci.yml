@@ -31,7 +31,7 @@ jobs:
         run: |
           cp .env.example .env
           docker compose -f pc_src/docker-compose.yml config > /dev/null
-          docker compose -f rpi_src/docker_simulation/docker-compose.yml config > /dev/null
+          docker compose -f rpi_src/docker/docker-compose.yml config > /dev/null
 
   deploy-k8s:
     needs: test-and-validate

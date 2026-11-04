@@ -104,7 +104,6 @@
 \Huge\sffamily
 \nazevcz\par
 \vspace{0.6cm}
-\Large\scshape \ifthenelse{\boolean{bc}}{bakalářská}{diplomová} práce
 }
 \end{center} 
  
@@ -181,8 +180,6 @@ V~Ústí nad Labem dne \today   \hfill Podpis: \makebox[4cm][s]{\dotfill}
 \textsc{\nazevcz}
 
 \textbf{Abstrakt:}
-
-%Tato bakalářská práce se zabývá návrhem, implementací a vyhodnocením systému pro monitorování a analýzu dopravy pomocí metod počítačového vidění. Cílem práce je vytvořit funkční prototyp zařízení schopného v reálném čase analyzovat videozáznam z dopravní lokality, detekovat a klasifikovat účastníky provozu, jako jsou vozidla, chodci a cyklisté, a zaznamenávat jejich průjezdy a průchody definovanou oblastí. Navržený systém je realizován na platformě Raspberry Pi s využitím AI akcelerátoru a moderních detekčních modelů. Součástí práce je také softwarová aplikace pro ukládání a vizualizaci získaných dat. Funkčnost a přesnost systému jsou ověřeny pomocí experimentů v reálném prostředí a porovnáním s manuálním pozorováním.
 Tato bakalářská práce se zabývá návrhem, implementací a vyhodnocením systému pro monitorování a analýzu silniční dopravy pomocí metod počítačového vidění. Cílem práce je vytvořit funkční prototyp zařízení schopného v~reálném čase analyzovat videozáznam z~dopravní lokality, detekovat a klasifikovat účastníky provozu (primárně osobní automobily, autobusy a nákladní vozidla, případně chodce) a zaznamenávat jejich průjezdy definovanou oblastí zájmu (ROI). Navržený systém je realizován na platformě Raspberry Pi 5 s~využitím dedikovaného AI akcelerátoru Hailo-8 a moderních detekčních modelů rodiny YOLO. Součástí práce je také softwarová aplikace pro ukládání záznamů do relační databáze a jejich interaktivní vizualizaci. Funkčnost, výpočetní výkon a přesnost systému jsou ověřeny pomocí experimentů nad reálným dopravním záznamem za zhoršených povětrnostních podmínek a porovnány s~referenčním řešením na grafické kartě (GPU) i manuálním pozorováním.
 
 \textbf{Klíčová slova:} počítačové vidění, monitorování dopravy, detekce objektů, Edge AI, Raspberry Pi
@@ -192,8 +189,6 @@ Tato bakalářská práce se zabývá návrhem, implementací a vyhodnocením sy
 \textsc{\nazeven}
 
 \textbf{Abstract:}
-%This bachelor’s thesis focuses on the design, implementation, and evaluation of a system for traffic monitoring and analysis using computer vision methods. The aim of the thesis is to develop a functional prototype capable of real-time video analysis of a traffic scene, including detection and classification of traffic participants such as vehicles, pedestrians, and cyclists, and counting their movements across a defined area. The proposed system is implemented on the Raspberry Pi platform using an AI accelerator and modern object detection models. The thesis also includes the development of a software application for data storage and visualization. The functionality and accuracy of the system are verified through experiments conducted in real-world conditions and by comparison with manual observations.
-
 This bachelor's thesis focuses on the design, implementation, and evaluation of a road traffic monitoring and analysis system using computer vision methods. The aim of the thesis is to develop a functional prototype capable of real-time video analysis of a traffic scene, including the detection and classification of traffic participants (primarily passenger cars, buses, and trucks, as well as pedestrians) and counting their movements across a defined region of interest (ROI). The proposed system is implemented on the Raspberry Pi 5 platform using the Hailo-8 AI accelerator and modern YOLO object detection models. The thesis also includes the development of a software application for relational database storage and interactive data visualization. The functionality, computational performance, and accuracy of the system are verified through experiments on real-world winter traffic footage and evaluated against both a reference GPU implementation and manual ground truth observations.
 
 \textbf{Keywords:} computer vision, traffic monitoring, object detection, Edge AI, Raspberry Pi
