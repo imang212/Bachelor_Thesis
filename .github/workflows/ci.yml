@@ -30,8 +30,8 @@ jobs:
       - name: Validate Docker Compose files
         run: |
           cp .env.example .env
-          docker compose -f pc_src/docker-compose.yml config > /dev/null
-          docker compose -f rpi_src/docker/docker-compose.yml config > /dev/null
+          docker compose -f pc_src/docker-compose.yml --env-file .env config > /dev/null
+          docker compose -f rpi_src/docker/docker-compose.yml --env-file .env config > /dev/null
 
   deploy-k8s:
     needs: test-and-validate

@@ -199,3 +199,7 @@ Zbytek jsou nižší priority (LFS pro velká PDF, rozdělení `API_with_streaml
 a ověření, že PDF se přeloží. Pak je práce z mého pohledu hotová.
 
 Příští kontrola po opravě bodů 1 (CI) a 2 (rotace).
+
+## Potvrzení studenta k bodu 2 (Bezpečnost a rotace hesel)
+- Přístupová hesla k MQTT brokeru (`mqtt.portabo.cz`), RTSP kameře (`192.168.37.99`) a databázi PostgreSQL byla zneplatněna a rotována (nahrazena novými údaji uloženými výhradně v lokálním `.env` mimo verzovací systém Git).
+- Historie repozitáře byla zkontrolována na přítomnost původních hesel.

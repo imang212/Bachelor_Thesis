@@ -12,7 +12,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
-COPY rpi_src/docker_simulation/api/requirements.txt ./requirements.txt
+COPY rpi_src/docker/api_requirements.txt ./requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY common/ ./common/

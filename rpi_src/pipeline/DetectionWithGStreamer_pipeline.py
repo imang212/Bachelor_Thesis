@@ -27,7 +27,7 @@ from collections import deque
 from collections import defaultdict
 from common.MQTTClient import MQTTPublisher
 from common.config import get_camera_rtsp_url
-from WebSocket import WebSocketServerWithDetectionData
+WebSocketServerWithDetectionData = None
 try:
     from hailo import get_roi_from_buffer, HAILO_DETECTION, HAILO_UNIQUE_ID
 except ImportError as e:
@@ -314,7 +314,7 @@ class HailoTrackerPipeline:
         if enable_rtsp: self.rtsp_server = RTSPServer(port=8554, mount_point="/hailo_stream")
         # WebSocket server
         self.websocket_server = None
-        if enable_websocket: self.websocket_server = WebSocketServerWithDetectionData(detection_data=self.detection_data, host="0.0.0.0", port=8765)
+        if enable_websocket and WebSocketServerWithDetectionData: self.websocket_server = WebSocketServerWithDetectionData(detection_data=self.detection_data, host="0.0.0.0", port=8765)
         # MQTT publisher
         self.mqtt_publisher = None
         if enable_mqtt: self.mqtt_publisher = MQTTPublisher(client_id="hailo_tracker_client")

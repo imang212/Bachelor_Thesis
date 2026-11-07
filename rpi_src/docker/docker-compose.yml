@@ -61,7 +61,7 @@ services:
     env_file: ../../.env                      # MQTT and other settings
     devices:
       - "/dev/hailo0:/dev/hailo0"
-    command: python3 -m rpi_src.pipeline.DetectionWithGStreamer_pipeline --enable-mqtt --rtsp-link rtsp_server:8554/mystream
+    command: python3.11 -m rpi_src.pipeline.DetectionWithGStreamer_pipeline --enable-mqtt --rtsp-link rtsp_server:8554/mystream
    # Subscribes to the MQTT topic and stores the received detections in PostgreSQL
   db_subscriber:
     build:
@@ -74,7 +74,7 @@ services:
     env_file: ../../.env
     environment:
       DB_HOST: postgres
-    command: python -m common.DatabaseManagerPostgre
+    command: python3.11 -m common.DatabaseManagerPostgre
 
   api:
     build:
@@ -100,6 +100,7 @@ services:
     env_file: ../../.env
     environment:
       DB_HOST: postgres
+      API_BASE_URL: http://api:8000
     ports:
       - "8501:8501"
     command: streamlit run rpi_src/pipeline/API_with_streamlit.py --server.port 8501 --server.address 0.0.0.0
