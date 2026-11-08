@@ -25,7 +25,7 @@ jobs:
 
       - name: Run unit tests
         run: |
-          pytest tests/
+          PYTHONPATH=. python -m pytest tests/
 
       - name: Validate Docker Compose files
         run: |

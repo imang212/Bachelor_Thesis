@@ -1,9 +1,14 @@
 # tests/test_common.py
 # run in root directory by: python3 -m unittest discover tests
 import os
+import sys
+from pathlib import Path
 import unittest
 from unittest.mock import patch
 from shapely.geometry import Point, Polygon
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
 from common.config import get_db_config, get_mqtt_config, get_camera_rtsp_url
 
 class TestTrafficSystem(unittest.TestCase):
