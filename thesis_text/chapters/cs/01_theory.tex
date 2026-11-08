@@ -35,12 +35,6 @@ Jakmile jsou v~novém snímku získány čerstvé detekce, nastupuje Maďarský 
     \label{fig:sort_overview}
 \end{figure}
 
-%\begin{enumerate}
-%    \item \textbf{Odhad Kalmanovým filtrem (z angl. \textit{KF Estimation}):} Tato část schématu představuje paměť systému. Na základě předchozího stavu (\textit{Previous State}) algoritmus provede matematickou predikci (\textit{Kalman Filter Prediction}), čímž získá odhadovanou polohu sledovaných objektů v aktuálním čase (\textit{State Prediction}).
-%    \item \textbf{Asociace dat (z angl. \textit{Data Association}):} Do tohoto bloku vstupují jak odhadnuté polohy z Kalmanova filtru, tak zcela nové detekce z modelu YOLO. Úkolem párovací matice (\textit{Cost Matrix Matching}) je optimálně spojit tyto dva vstupy pomocí metriky \acs{IoU}. Výstupem jsou tři možné stavy: úspěšně spárovaná měření (\textit{Matched Measurement}), nové detekce bez historie (\textit{Unmatched Measurement}) a existující stopy, ke kterým se nenašla nová detekce (\textit{Unmatched Tracks}).
-%    \item \textbf{Správa stop (z angl. \textit{Track Management}):} V závěrečné fázi systém reaguje na výsledky předchozí asociace. Spárovaná měření aktualizují Kalmanův filtr a udržují se v poli aktivních stop (\textit{Array of Tracks}). Z nespárovaných měření, což typicky představuje nově příchozí vozidla, se inicializují stopy nové (\textit{Track Initialization}). Nespárované stopy, tedy vozidla, která pravděpodobně opustila scénu, jsou po splnění stanovených podmínek ze systému odstraněny (\textit{Track Delete}). Validní stopy jsou následně propuštěny na finální výstup (\textit{Output}).
-%\end{enumerate}
-
 Na obrázku~\ref{fig:sort_overview} je detailně znázorněna celá pracovní smyčka (z~angl. \textit{pipeline}) algoritmu SORT~\cite{SORT_original_2016}, která se nezávisle opakuje s~každým novým obrazovým snímkem. Podle blokového schématu lze celý proces logicky rozdělit do tří na sebe navazujících fází:
 
 \begin{enumerate}
@@ -70,6 +64,9 @@ Na obrázku~\ref{fig:deepsort_overview} je detailně znázorněna architektura a
     
     \item \textbf{Správa stop a aktualizace:} Výstupy z~asociace dat se dělí do tří směrů. Úspěšně spárovaná měření (\textit{Přiřazená měření}) jsou využita k~okamžité aktualizaci Kalmanova filtru (\textit{Aktualizace Kalmanova filtru}). Zcela nová detekovaná vozidla, která nemají historii (\textit{Nepřiřazená měření}), zakládají v~systému nové, zatím nepotvrzené stopy (\textit{Inicializace předběžné stopy}). Správa stop následně kontroluje celé pole aktivních záznamů (\textit{Pole stop}). Vozidla, jež dlouhodobě chybí a splní podmínky pro smazání (\textit{Podmínky pro odstranění}), jsou ze systému odstraněna (\textit{Odstranění stopy}). Stopy splňující výstupní kritéria (\textit{Výstupní podmínky}) jsou předány na finální výstup v~podobě souřadnic a unikátních identifikátorů (\textit{Výstup}).
 \end{enumerate}
+
+\subsubsection{ByteTrack}
+Algoritmus ByteTrack~\cite{zhang_bytetrack_2022} představuje moderní rozšíření algoritmu \acs{SORT}~\cite{SORT_original_2016}, které řeší problém ztráty sledované stopy při částečném zákrytu vozidla, aniž by vyžadovalo výpočetně náročnou extrakci vzhledových příznaků pomocí konvoluční sítě jako \acs{DeepSORT}~\cite{wojke_deepsort_2017}. Zatímco tradiční přístupy zahazují detekční rámečky, jejichž míra spolehlivosti (\textit{confidence}) klesne pod stanovený práh, ByteTrack zavádí dvoufázové párování. V~první fázi spáruje existující stopy s~vysoce spolehlivými detekcemi nad prahem a~ve druhé fázi asociuje zbylé stopy i~se slabšími detekcemi (které mají nižší spolehlivost například kvůli dočasnému zakrytí jiným vozidlem či hustým sněžením). Díky absenci pomocné neuronové sítě dosahuje ByteTrack vysoké snímkové propustnosti (\acs{FPS}) v~reálném čase~\cite{zhang_bytetrack_2022}.
 
 \subsection{Metody sčítání objektů}
 Samotné automatické sčítání objektů v~dopravním proudu bezprostředně navazuje na výsledky získané z~MOT. Namísto prosté kumulace detekcí v~jednotlivých samostatných snímcích, která by vedla k~masivnímu nadhodnocení výsledků (například z~důvodu vícenásobného započítání téhož stojícího či pomalu jedoucího vozidla), se využívá analýzy časoprostorových trajektorií jednoznačně identifikovaných objektů~\cite{zhou_traffic_survey_2024}.
@@ -164,12 +161,12 @@ Na obrázku~\ref{fig:yolo_arch} je detailně znázorněna topologie vrstev půvo
 Klíčovým inovačním prvkem této architektury je zařazení střídavých redukčních konvolučních vrstev s~filtrem $1 \times 1$. Tyto vrstvy fungují jako informační úzká hrdla (z~angl. \textit{bottlenecks}) – efektivně zmenšují prostor příznaků z~předchozích vrstev, čímž drasticky redukují množství potřebných matematických operací bez zásadní ztráty kontextu. Moderní varianty modelů z~rodiny YOLO jsou pro účely přesné objektové detekce standardně trénovány a vyhodnocovány na rozsáhlém datasetu COCO\footnote{\href{https://www.kaggle.com/datasets/erennik/coconames}{COCO dataset}} (z~angl. \textit{Common Objects in Context})~\cite{lin_coco_2014}. Tento dataset obsahuje stovky tisíc detailně anotovaných snímků reálných scén a plně definuje 80 základních tříd objektů, což detekčnímu modelu poskytuje vysoce robustní výchozí základ pro spolehlivé rozpoznávání různorodých účastníků dopravního provozu (osobní automobily, autobusy, nákladní vozy či chodce).
 
 \subsection{Architektura a škálování variant modelu YOLOv8}
-Významný architektonický posun přinesla generace modelů \textbf{YOLOv8}, vyvinutá společností Ultralytics~\cite{terven_yolo_review_2023, jocher_yolov8_2023}. Oproti starším generacím opouští YOLOv8 koncept předdefinovaných kotevních obdélníků a zavádí plně bezkotevní (\textit{anchor-free}) detekci, která přímo predikuje střed objektu a jeho vzdálenosti k~hranám ohraničujícího rámečku. Detekční hlava je navíc rozdělena (\textit{decoupled head}) na dvě nezávislé větve – jedna řeší výhradně klasifikaci tříd pomocí binární křížové entropie (BCE) a druhá prostorovou regresi souřadnic pomocí ztrátových funkcí CIoU a DFL (\textit{Distribution Focal Loss}). V~páteřní síti (\textit{backbone}) a krku (\textit{neck}) byl starší konvoluční blok C3 nahrazen novým stavebním modulem \textbf{C2f} (\textit{CSP Bottleneck with 2 convolutions}), který propojuje příznaky z~více mezivrstev a zajišťuje bohatší tok gradientů při zachování nízké výpočetní náročnosti~\cite{terven_yolo_review_2023}.
+Významný architektonický posun přinesla generace modelů \textbf{YOLOv8}, vyvinutá společností Ultralytics~\cite{terven_yolo_review_2023, ultralytics_yolov8_docs}. Oproti starším generacím opouští YOLOv8 koncept předdefinovaných kotevních obdélníků a zavádí plně bezkotevní (\textit{anchor-free}) detekci, která přímo predikuje střed objektu a jeho vzdálenosti k~hranám ohraničujícího rámečku. Detekční hlava je navíc rozdělena (\textit{decoupled head}) na dvě nezávislé větve – jedna řeší výhradně klasifikaci tříd pomocí binární křížové entropie (\acs{BCE}) a druhá prostorovou regresi souřadnic pomocí ztrátových funkcí CIoU a DFL (\textit{Distribution Focal Loss}). V~páteřní síti (\textit{backbone}) a krku (\textit{neck}) byl starší konvoluční blok C3 nahrazen novým stavebním modulem \textbf{C2f} (\textit{CSP Bottleneck with 2 convolutions}), který propojuje příznaky z~více mezivrstev a zajišťuje bohatší tok gradientů při zachování nízké výpočetní náročnosti~\cite{terven_yolo_review_2023}.
 
-Aby bylo možné tutéž architekturu nasadit jak na extrémně úsporných mikropočítačích, tak na výkonných cloudových serverech, je rodina YOLOv8 rozdělena do pěti velikostních variant: \textbf{Nano (\texttt{n})}, \textbf{Small (\texttt{s})}, \textbf{Medium (\texttt{m})}, \textbf{Large (\texttt{l})} a \textbf{Extra Large (\texttt{x})}~\cite{jocher_yolov8_2023}. Všechny tyto varianty sdílejí totožnou makro-architekturu (stejné pořadí konvolučních vrstev, bloků C2f a vrstvy SPPF), ale liší se hodnotou tří škálovacích koeficientů (\textit{compound scaling constants})~\cite{terven_yolo_review_2023, jocher_yolov8_2023}:
+Aby bylo možné tutéž architekturu nasadit jak na extrémně úsporných mikropočítačích, tak na výkonných cloudových serverech, je rodina YOLOv8 rozdělena do pěti velikostních variant: \textbf{Nano (\texttt{n})}, \textbf{Small (\texttt{s})}, \textbf{Medium (\texttt{m})}, \textbf{Large (\texttt{l})} a \textbf{Extra Large (\texttt{x})}~\cite{ultralytics_yolov8_docs}. Všechny tyto varianty sdílejí totožnou makro-architekturu (stejné pořadí konvolučních vrstev, bloků C2f a vrstvy SPPF), ale liší se hodnotou tří škálovacích koeficientů (\textit{compound scaling constants})~\cite{terven_yolo_review_2023, ultralytics_yolov8_docs}:
 \begin{itemize}
     \item \textbf{Hloubkový multiplikátor ($d$, \texttt{depth\_multiple}):} Určuje, kolikrát se uvnitř každého modulu C2f opakují vnitřní reziduální bloky (\textit{Bottleneck}). Tím přímo řídí celkový počet vrstev neuronové sítě – menší modely \texttt{YOLOv8n} a \texttt{YOLOv8s} ($d=0{,}33$) čítají v~neslitém výpočetním grafu \textbf{225 vrstev} (168 vrstev po fúzi konvoluce a dávkové normalizace při inferenci), střední model \texttt{YOLOv8m} ($d=0{,}67$) obsahuje \textbf{295 vrstev} (218 po fúzi) a největší modely \texttt{YOLOv8l} a \texttt{YOLOv8x} ($d=1{,}00$) dosahují hloubky \textbf{365 vrstev} (268 po fúzi).
-    \item \textbf{Šířkový multiplikátor ($w$, \texttt{width\_multiple}):} Škáluje počet konvolučních filtrů (výstupních kanálů) v~každé vrstvě sítě v~rozsahu od $w=0{,}25$ (varianta \texttt{n}) až po $w=1{,}25$ (varianta \texttt{x}). Růst šířky sítě kvadraticky zvyšuje počet trénovatelných parametrů i nároky na výpočetní výkon (GFLOPs).
+    \item \textbf{Šířkový multiplikátor ($w$, \texttt{width\_multiple}):} Škáluje počet konvolučních filtrů (výstupních kanálů) v~každé vrstvě sítě v~rozsahu od $w=0{,}25$ (varianta \texttt{n}) až po $w=1{,}25$ (varianta \texttt{x}). Růst šířky sítě kvadraticky zvyšuje počet trénovatelných parametrů i nároky na výpočetní výkon (\acs{GFLOPs}).
     \item \textbf{Maximální počet kanálů ($c_{\max}$, \texttt{max\_channels}):} Omezuje horní hranici počtu kanálů v~nejhlubších vrstvách sítě (1\,024 kanálů pro \texttt{n}/\texttt{s}, 768 pro \texttt{m} a 512 pro \texttt{l}/\texttt{x}), aby u~hlubokých modelů nedocházelo k~neúměrnému nárůstu paměťové stopy.
 \end{itemize}
 
@@ -188,11 +185,11 @@ Srovnání všech pěti variant při vstupním rozlišení $640 \times 640$~pixe
         \textbf{YOLOv8l} & 1,00 & 1,00 & 365 (268) & 43,7~M & 165,2~GFLOPs & 52,9~\% \\ \hline
         \textbf{YOLOv8x} & 1,00 & 1,25 & 365 (268) & 68,2~M & 257,8~GFLOPs & 53,9~\% \\ \hline
     \end{tabular}
-    \caption{Teoretické porovnání architektury a parametrů variant modelu YOLOv8 při vstupním rozlišení $640 \times 640$~px na datasetu COCO val2017~\cite{terven_yolo_review_2023, jocher_yolov8_2023}.}
+    \caption{Teoretické porovnání architektury a parametrů variant modelu YOLOv8 při vstupním rozlišení $640 \times 640$~px na datasetu COCO val2017~\cite{terven_yolo_review_2023, ultralytics_yolov8_docs}.}
     \label{tab:yolov8_variants}
 \end{table}
 
-Jak vyplývá z~tabulky~\ref{tab:yolov8_variants}, přechod od nejmenší varianty \texttt{YOLOv8n} ke střední variantě \textbf{\texttt{YOLOv8m}} (zvolené pro implementaci na akcelerátoru Hailo-8 v~této práci) přináší skokové zvýšení detekční přesnosti $\text{mAP}_{50-95}$ z~37,3~\% na 50,2~\% díky hlubší extrakci příznaků v~295 vrstvách. Naopak další zvětšování modelu na varianty \texttt{l} a \texttt{x} již přináší pouze mírný nárůst přesnosti (o~2,7 až 3,7 procentního bodu), avšak za cenu dvojnásobného až trojnásobného nárůstu výpočetní složitosti (GFLOPs), což je pro okrajová zařízení s~omezenou pamětí neefektivní.
+Jak vyplývá z~tabulky~\ref{tab:yolov8_variants}, přechod od nejmenší varianty \texttt{YOLOv8n} ke střední variantě \textbf{\texttt{YOLOv8m}} (zvolené pro implementaci na akcelerátoru Hailo-8 v~této práci) přináší skokové zvýšení detekční přesnosti $\text{mAP}_{50-95}$ z~37,3~\% na 50,2~\% díky hlubší extrakci příznaků v~295 vrstvách. Naopak další zvětšování modelu na varianty \texttt{l} a \texttt{x} již přináší pouze mírný nárůst přesnosti (o~2,7 až 3,7 procentního bodu), avšak za cenu dvojnásobného až trojnásobného nárůstu výpočetní složitosti (\acs{GFLOPs}), což je pro okrajová zařízení s~omezenou pamětí neefektivní.
 
 \section{Systémy pro monitorování dopravy}
 Monitorování dopravy představuje klíčovou součást moderních inteligentních dopravních systémů. Jeho primárním cílem je kontinuální získávání informací o~dopravním provozu, jako je intenzita dopravy, průměrná rychlost vozidel, detekce kongescí nebo výskyt nestandardních dopravních událostí. Tyto agregované informace jsou následně využívány pro aktivní řízení dopravy, strategické plánování městské infrastruktury a zvyšování celkové bezpečnosti silničního provozu~\cite{zhou_traffic_survey_2024}.
@@ -213,14 +210,6 @@ S~raketovým rozvojem počítačového vidění a dostupností vysokého výpoč
 Mezi hlavní výhody těchto systémů patří vysoká flexibilita (změna sledované oblasti často vyžaduje pouze softwarovou úpravu virtuálních čar, nikoliv překopání vozovky) a možnost využití jedné kamery pro paralelní běh více analytických úloh. Nevýhodou kamerových systémů jsou naopak jejich limity spojené s~kvalitou vstupních obrazových dat. Výkon detekčních a sledovacích algoritmů může být negativně ovlivněn prudkými změnami světelných podmínek, nepříznivým počasím (mlha, hustý déšť) nebo vzájemným vizuálním překrýváním objektů ve scéně. Tyto faktory představují výzvu zejména v~hustém městském provozu~\cite{zhou_traffic_survey_2024}.
 
 \subsubsection{Vstupní zařízení kamerových systémů}
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.5\textwidth]{images/traffic_camera.jpg}
-    \caption{Typické umístění dohledových \acs{IP} kamer na sloupu infrastruktury. Toto neinvazivní řešení poskytuje stabilní obrazový tok pro následnou detekci a inferenci na okrajových zařízeních (převzato z~\cite{zdroj_kamera}).}
-    \label{fig:traffic_camera}
-\end{figure}
-
 Pro zajištění kvalitního obrazového vstupu, který je pro algoritmy počítačového vidění kritický, se v~moderních systémech \acs{Edge AI} využívají primárně dva typy snímacích zařízení, jež přímo reflektují potřeby vývoje i reálného nasazení v~dopravní infrastruktuře:
 
 \begin{itemize}
@@ -228,6 +217,13 @@ Pro zajištění kvalitního obrazového vstupu, který je pro algoritmy počít
     
     \item \textbf{Kamerové moduly s~přímým rozhraním (např. senzory Sony IMX):} Jedná se o~kompaktní kamerové moduly navržené pro přímé hardwarové připojení k~jednodeskovým počítačům (jako je platforma Raspberry Pi) pomocí vysokorychlostní sběrnice MIPI CSI. Zásadní výhodou tohoto řešení je minimální latence, jelikož surová obrazová data putují ze snímače rovnou do operační paměti výpočetního zařízení bez nutnosti jakéhokoliv síťového kódování a dekódování. Tyto senzory představují vysoce efektivní nástroj pro prototypování a autonomní nasazení analytických uzlů bez nutnosti budování složité lokální sítě.
 \end{itemize}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.5\textwidth]{images/traffic_camera.jpg}
+    \caption{Typické umístění dohledových \acs{IP} kamer na sloupu infrastruktury. Toto neinvazivní řešení poskytuje stabilní obrazový tok pro následnou detekci a inferenci na okrajových zařízeních (převzato z~\cite{zdroj_kamera}).}
+    \label{fig:traffic_camera}
+\end{figure}
 
 % obrazky kamer pridat
 \subsection{Existující řešení a projekty}
@@ -264,7 +260,7 @@ Hlavním rozdílem a zároveň největším benefitem je eliminace zpoždění s
 Na obrázku~\ref{fig:edge_vs_cloud} je schematicky znázorněn rozdíl mezi oběma přístupy. Cloud computing se spoléhá na centrální servery, což vytváří úzké hrdlo na síťové vrstvě. Edge computing naopak přesouvá výpočetní logiku (inferenci) až na samotný okraj sítě k~senzorům, což garantuje vysokou propustnost a okamžité vyhodnocování.
 
 \subsection{Hardwarové AI akcelerátory}
-\acs{AI} akcelerátory, často označované jako \acs{NPU} (z~angl. \textit{Neural Processing Unit}), jsou specializované integrované obvody navržené primárně pro efektivní provádění tenzorových výpočtů. Na rozdíl od univerzálních centrálních procesorů (\acs{CPU}) jsou tyto čipy na hardwarové úrovni optimalizovány pro masivní paralelní zpracování maticových operací, jež tvoří matematický základ hlubokých konvolučních sítí.
+AI akcelerátory, často označované jako \acs{NPU} (z~angl. \textit{Neural Processing Unit}), jsou specializované integrované obvody navržené primárně pro efektivní provádění tenzorových výpočtů. Na rozdíl od univerzálních centrálních procesorů (\acs{CPU}) jsou tyto čipy na hardwarové úrovni optimalizovány pro masivní paralelní zpracování maticových operací, jež tvoří matematický základ hlubokých konvolučních sítí.
 
 V~kontextu \acs{Edge AI} jsou tyto akcelerátory naprosto nezbytné, protože překonávají tzv. von Neumannovo úzké hrdlo. Běžné procesory ztrácejí obrovské množství času a energie neustálým přesouváním mezivýsledků mezi výpočetními jednotkami a hlavní pamětí. Akcelerátory tento problém eliminují tím, že udržují data co nejblíže samotným výpočetním jádrům. Umožňují tak nasazení složitých detekčních a sledovacích modelů na energeticky úsporných a prostorově omezených vestavěných zařízeních, a to při zachování propustnosti nutné pro plynulou analýzu dopravy bez závislosti na výkonných serverových farmách~\cite{hailo_alpr_2024, hailo_architecture_2026}.
 
@@ -317,33 +313,43 @@ Vztah mezi predikcí modelu a skutečností se ve strojovém učení standardně
 Na základě těchto hodnot jsou následně vypočítány reálné metriky pro danou scénu. Tato analýza poskytuje kritický vhled do toho, do jaké míry případné chyby ve finálním sčítání pocházejí z~nepřesné primární detekce a do jaké míry jsou způsobeny až selháním sledovacího algoritmu.
 
 \subsection{Metriky hodnocení detekčních modelů}
-Při samotném vývoji a trénování detekčních modelů se k~objektivnímu měření výkonu na referenčních datasetech (tzv. \textit{ground truth}) využívá standardizovaná sada matematických metrik~\cite{szeliski_computer_vision}:
+Při vývoji a~vyhodnocování detekčních modelů i~navazujících sčítacích systémů se k~objektivnímu měření výkonu vůči referenčním datům (\textit{ground truth}) využívá standardizovaná sada matematických metrik~\cite{szeliski_computer_vision}:
 
-\begin{itemize}
-    \item \textbf{Precision (Přesnost):} Vyjadřuje podíl skutečně správných detekcí vůči všem detekcím, které model vyprodukoval. Indikuje, jak moc lze věřit modelu, když ohlásí nález vozidla.
-    $$ Precision = \frac{TP}{TP + FP} $$
-    \item \textbf{Recall (Úplnost):} Udává schopnost systému nalézt všechny relevantní objekty přítomné ve scéně. Definuje se jako podíl správně detekovaných objektů vůči reálnému počtu existujících objektů.
-    $$ Recall = \frac{TP}{TP + FN} $$
-    \item \textbf{IoU (Intersection over Union):} Vyjadřuje exaktní míru geometrického překryvu mezi predikovaným ohraničujícím boxem ($B_{pred}$) a reálným boxem ($B_{gt}$). Čím více se hodnota blíží k~jedné, tím je lokalizace přesnější.
-    $$ IoU = \frac{\text{Plocha průniku}}{\text{Plocha sjednocení}} = \frac{|B_{pred} \cap B_{gt}|}{|B_{pred} \cup B_{gt}|} $$
-    \item \textbf{mAP (Mean Average Precision):} Představuje komplexní ukazatel výkonu modelu napříč všemi detekovanými třídami ($N$), který zohledňuje přesnost, úplnost i kvalitu lokalizace zjištěnou pomocí křivky Average Precision ($AP$).
-    $$ mAP = \frac{1}{N} \sum_{i=1}^{N} AP_i $$
-    \item \textbf{Accuracy (Přesnost klasifikace):} Metrika vyjadřující celkový podíl všech správných rozhodnutí. Jak již bylo zmíněno, v~detekci objektů má vzhledem k~obrovské nerovnováze mezi počtem objektů a plochou prázdného pozadí (obrovské a nedefinovatelné množství TN) jen mizivou vypovídající hodnotu.
-    $$ Accuracy = \frac{TP + TN}{TP + TN + FP + FN} $$
-\end{itemize}
+\medskip
+\noindent\textbf{Precision (Přesnost):} Vyjadřuje podíl skutečně správných detekcí vůči všem detekcím, které systém vyprodukoval. Indikuje, do jaké míry lze modelu věřit, když ohlásí nález vozidla:
+$$\text{Precision} = \frac{TP}{TP + FP}$$
 
-Vzhledem k~tomu, že v~rámci této bakalářské práce je implementován a nasazován již hotový předtrénovaný model z~rodiny YOLO, není primárním cílem optimalizace jeho interních vah pomocí výše zmíněných metrik na testovacích datasetech. Cílem je naopak ověření jeho reálné propustnosti a praktické výkonnosti jakožto sčítacího softwarového uzlu v~konkrétním dopravním prostředí.
+\noindent\textbf{Recall (Úplnost):} Udává schopnost systému nalézt všechny relevantní objekty přítomné ve scéně. Definuje se jako podíl správně detekovaných objektů vůči reálnému počtu existujících objektů:
+$$\text{Recall} = \frac{TP}{TP + FN}$$
+
+\noindent\textbf{F1-skóre:} Představuje harmonický průměr přesnosti (Precision) a~úplnosti (Recall), který poskytuje vyváženou souhrnnou metriku i~při nerovnoměrném zastoupení chyb typu $FP$ a~$FN$:
+$$F1 = 2 \cdot \frac{\text{Precision} \cdot \text{Recall}}{\text{Precision} + \text{Recall}} = \frac{2 \cdot TP}{2 \cdot TP + FP + FN}$$
+
+\noindent\textbf{IoU (Intersection over Union):} Vyjadřuje exaktní míru geometrického překryvu mezi predikovaným ohraničujícím obdélníkem ($B_{\text{pred}}$) a~referenčním obdélníkem ($B_{\text{gt}}$). Čím více se hodnota blíží k~jedné, tím je lokalizace přesnější:
+$$\text{IoU} = \frac{\text{Plocha průniku } (B_{\text{pred}} \cap B_{\text{gt}})}{\text{Plocha sjednocení } (B_{\text{pred}} \cup B_{\text{gt}})}$$
+
+\noindent\textbf{mAP (Mean Average Precision):} Představuje komplexní ukazatel výkonu modelu napříč všemi detekovanými třídami ($N$) na trénovacích datasetech (např. COCO), který zohledňuje přesnost, úplnost i~kvalitu lokalizace zjištěnou pomocí plochy pod křivkou \textit{Average Precision} ($AP_i$):
+$$\text{mAP} = \frac{1}{N} \sum_{i=1}^{N} AP_i$$
+
+\noindent\textbf{Accuracy (Přesnost klasifikace):} Metrika vyjadřující podíl správných rozhodnutí vůči všem případům. Při vyhodnocování detekce dopravních objektů (kde se neurčuje počet $TN$ prázdného pozadí, tedy $TN = 0$) přechází vztah do podoby tzv. \textit{Critical Success Index}:
+$$\text{Accuracy} = \frac{TP + TN}{TP + TN + FP + FN}$$
+
+\noindent\textbf{FPS (Frames Per Second) a~doba zpracování snímku:} Pro vyhodnocení výpočetní výkonnosti a~schopnosti provozu v~reálném čase se u~detekčních a~sledovacích systémů standardně měří snímková propustnost \acs{FPS}, tedy počet snímků zpracovaných za jednu sekundu~\cite{zhou_traffic_survey_2024, redmon_yolo_2016}. Určuje se jako podíl celkového počtu zpracovaných snímků ($N_{\text{frames}}$) a~celkové doby běhu výpočetního řetězce ($T_{\text{total}}$). Převrácená hodnota propustnosti ($\bar{t}_{\text{frame}}$) pak udává průměrný časový krok potřebný ke zpracování jednoho snímku v~milisekundách:
+$$\text{FPS} = \frac{N_{\text{frames}}}{T_{\text{total}}} \quad [\text{s}^{-1}], \qquad \bar{t}_{\text{frame}} = \frac{1000}{\text{FPS}} \quad [\text{ms}]$$
+V~zřetězených (\textit{pipelined}) architekturách je nutné tento průměrný krok zpracování snímku ($\bar{t}_{\text{frame}}$) odlišovat od celkové koncové (\textit{end-to-end}) latence živého přenosu, která navíc zahrnuje prodlevu síťové vyrovnávací paměti přijímače (\acs{RTSP} bufferu) a~dekódování videa~\cite{gstreamer_docs}.
+
+Vzhledem k~tomu, že v~rámci této bakalářské práce je implementován a~nasazován již hotový předtrénovaný model z~rodiny YOLO, není primárním cílem optimalizace jeho interních vah pomocí trénovacích metrik (jako je $\text{mAP}$) na rozsáhlých testovacích datasetech. Cílem je naopak ověření jeho reálné snímkové propustnosti a~praktické přesnosti jakožto sčítacího softwarového uzlu v~konkrétním dopravním prostředí.
 
 \subsection{Metodika vyhodnocení počítání v~reálném prostředí}
-Vyhodnocení správnosti sčítání objektů je v~dopravních aplikacích klíčové. Na rozdíl od detekce izolovaných snímků se zde hodnotí konzistence sledovacího algoritmu (např. zda udrží ID vozidla) a správná prostorová identifikace průjezdů vyhrazenými počítacími liniemi. 
+Vyhodnocení správnosti sčítání objektů je v~dopravních aplikacích klíčové. Na rozdíl od detekce izolovaných snímků se zde hodnotí konzistence sledovacího algoritmu (např. zda udrží ID vozidla) a~správná prostorová identifikace průjezdů vyhrazenými počítacími liniemi. 
 
-Hlavními zdroji chyb v~reálném prostředí jsou časté vizuální překryvy objektů (okluze), ztráta identifikátoru způsobující opakované započítání téhož vozidla, nebo dynamické změny světelných podmínek a vrhání stínů. Jak potvrzují srovnávací studie zaměřené na reálné nasazení video-detekčních počítacích systémů, právě tyto faktory vnějšího prostředí představují největší výzvu pro udržení vysoké a stabilní provozní přesnosti~\cite{zhou_traffic_survey_2024}, \cite{pronello_2023}.
+Hlavními zdroji chyb v~reálném prostředí jsou časté vizuální překryvy objektů (okluze), ztráta identifikátoru způsobující opakované započítání téhož vozidla, nebo dynamické změny světelných podmínek a~vrhání stínů. Jak potvrzují srovnávací studie zaměřené na reálné nasazení video-detekčních počítacích systémů, právě tyto faktory vnějšího prostředí představují největší výzvu pro udržení vysoké a~stabilní provozní přesnosti~\cite{zhou_traffic_survey_2024}.
 
-V~reálném nasazení bez existence předem připravených exaktních datových sad je standardní evaluační metodou vytvoření vlastní sady referenčních dat (tzv. ground truth) formou nezávislého manuálního sčítání z~pořízeného videozáznamu~\cite{mdpi_roi_tracking_2022}, \cite{pronello_2023}. Referenční hodnota je tak získána nezávislým pozorováním, čímž je stanoven skutečný počet průjezdů vozidel ($N_{real}$). Tento údaj je následně porovnán s~počtem vozidel detekovaných automatizovaným systémem ($N_{sys}$) pomocí metriky poměrové přesnosti sčítání ($Accuracy_{count}$):
+V~reálném nasazení bez existence předem připravených exaktních datových sad je standardní evaluační metodou vytvoření vlastní sady referenčních dat (tzv. ground truth) formou nezávislého manuálního sčítání z~pořízeného videozáznamu~\cite{mdpi_roi_tracking_2022}. Referenční hodnota je tak získána nezávislým pozorováním, čímž je stanoven skutečný počet průjezdů vozidel ($N_{real}$). Tento údaj je následně porovnán s~počtem vozidel detekovaných automatizovaným systémem ($N_{sys}$) pomocí metriky poměrové přesnosti sčítání ($Accuracy_{count}$):
 
 $$Accuracy_{count} = \left( 1 - \frac{|N_{real} - N_{sys}|}{N_{real}} \right) \cdot 100 \ [\%]$$
 
-Tato metrika věrně a zcela exaktně reflektuje celkovou provozní úspěšnost systému při kontinuálním sčítání vozidel, a právě ona bude využita jako primární hodnoticí ukazatel v~testovací části této práce.
+Tato metrika věrně a~zcela exaktně reflektuje celkovou provozní úspěšnost systému při kontinuálním sčítání vozidel, a~právě ona bude využita jako primární hodnoticí ukazatel v~testovací části této práce.
 
 \section{Etické aspekty a GDPR}
 Při návrhu, nasazení a provozu jakýchkoliv kamerových systémů na veřejných prostranstvích a dopravních komunikacích je absolutně nezbytné zohlednit principy ochrany osobních údajů. Tyto povinnosti primárně vyplývají z~platného Nařízení Evropského parlamentu a Rady (EU) 2016/679, obecně známého pod zkratkou \acs{GDPR} (z~angl. \textit{General Data Protection Regulation}). Moderní kamerové systémy totiž ze své podstaty mohou neúmyslně zachytávat citlivé identifikační prvky, jakými jsou tváře chodců, řidičů nebo konkrétní registrační značky vozidel.
