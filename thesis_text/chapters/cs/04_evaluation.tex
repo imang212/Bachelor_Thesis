@@ -16,7 +16,7 @@ Aby bylo dosaženo metodicky korektního a~přímého srovnání obou platforem,
 \begin{enumerate}
     \item \textit{Kvantizace vah (INT8 vs. FP32/FP16) a~nastavení prahů:} Obě platformy využívají stejnou síť \texttt{YOLOv8m} se sjednoceným prahem spolehlivosti pro zakládání stop ($0{,}60$) a~prahem překryvu \acs{NMS} ($\text{IoU} = 0{,}50$). Rozdíl ve výsledcích tak přímo odráží vliv 8bitové kvantizace na čipu Hailo-8 oproti plné přesnosti na \acs{GPU} v~kombinaci se sledovacím algoritmem (\texttt{hailotracker} vs. dvoufázové párování ByteTrack s~pamětí \texttt{track\_buffer} = 50~snímků).
     \item \textit{Identická polygonální geometrie \acs{ROI}:} Na obou platformách byla pomocí knihovny Shapely aplikována shodná pětiúhelníková oblast zájmu definovaná normalizovanými vrcholy $[(0{,}10; 0{,}85), (0{,}46; 0{,}85), (0{,}60; 0{,}90), (0{,}45; 0{,}90), (0{,}40; 1{,}00)]$. Polygon přesně kopíruje perspektivu měřeného jízdního pruhu na výjezdu z~okružní křižovatky a~eliminuje falešné detekce mimo sledovanou komunikaci (včetně chodce pohybujícího se mimo tuto zónu).
-    \item \textit{Správa vyrovnávacích front při čtení souboru (4\,957 vs. 5\,113 snímků):} Oběma systémům byl předložen totožný zdrojový video soubor o~celkovém počtu 5\,113~snímků (odpovídající cca 255,6~s při 20~\acs{FPS}). Zatímco referenční \acs{GPU} implementace využívající bezztrátovou blokující frontu (\texttt{queue.Queue}) zpracovala všech 5\,113~snímků, nativní GStreamer pipeline na Raspberry Pi~5 analyzovala 4\,957~snímků. Rozdíl 156~snímků ($\sim 3{,}05~\%$ délky záznamu) je způsoben prvkem \texttt{queue leaky=downstream max-size-buffers=5} před modulem \texttt{hailofilter}, který je v~architektuře GStreameru navržen pro živé \acs{RTSP} streamování a~při nárazovém čtení z~lokálního souboru (\texttt{filesrc}) zahazuje mezisnímky při zaplnění fronty.
+    \item \textit{Správa vyrovnávacích front při čtení souboru (4\,957 vs. 5\,113 snímků):} Oběma systémům byl předložen totožný zdrojový video soubor o~celkovém počtu 5\,113~snímků (odpovídající cca 255,6~s~při 20~\acs{FPS}). Zatímco referenční \acs{GPU} implementace využívající bezztrátovou blokující frontu (\texttt{queue.Queue}) zpracovala všech 5\,113~snímků, nativní GStreamer pipeline na Raspberry Pi~5 analyzovala 4\,957~snímků. Rozdíl 156~snímků ($\sim 3{,}05~\%$ délky záznamu) je způsoben prvkem \texttt{queue leaky=downstream max-size-buffers=5} před modulem \texttt{hailofilter}, který je v~architektuře GStreameru navržen pro živé \acs{RTSP} streamování a~při nárazovém čtení z~lokálního souboru (\texttt{filesrc}) zahazuje mezisnímky při zaplnění fronty.
 \end{enumerate}
 
 \section{Vyhodnocení přesnosti detekce a matice záměn}
@@ -131,7 +131,7 @@ Provozní parametry obou implementací byly vyhodnoceny na základě telemetrick
 \begin{table}[H]
     \centering
     \small\renewcommand{\arraystretch}{1.2}
-    \setlength{\tabcolsep}{6pt}
+    \setlength{\tabcolsep}{4pt}
     \begin{tabular}{|l|c|c|}
         \hline
         \textbf{Měřený parametr} & \textbf{Edge (RPi 5 + Hailo-8)} & \textbf{Referenční GPU (RTX 2050)} \\ \hline
@@ -139,8 +139,8 @@ Provozní parametry obou implementací byly vyhodnoceny na základě telemetrick
         Rozlišení vstupního tenzoru & $640 \times 640$~px & $640 \times 640$~px \\ \hline
         Sledovací algoritmus a ROI & \texttt{hailotracker} + Polygon & ByteTrack + Polygon \\ \hline
         Celkový počet zpracovaných snímků & 4\,957 & 5\,113 \\ \hline
-        Snímky s detekcí v ROI & 3\,594 (72,5~\%) & 3\,205 (62,7~\%) \\ \hline
-        Celková doba běhu (\texttt{processing\_time}) & 168,65~s & 199,43~s \\ \hline
+        Snímky s~detekcí v~ROI & 3\,594 (72,5~\%) & 3\,205 (62,7~\%) \\ \hline
+        Celková doba běhu (\texttt{processing\_time}) & 168,65~s~& 199,43~s~\\ \hline
         Průměrná propustnost (\acs{FPS}) & \textbf{29,39~FPS} & \textbf{25,64~FPS} \\ \hline
         Průměrná doba zpracování snímku ($\text{FPS}^{-1}$) & \textbf{$\sim$34,02~ms} & \textbf{$\sim$39,00~ms} \\ \hline
         Využití \acs{CPU} (Raspberry Pi 5) & 25--35~\% & -- \\ \hline

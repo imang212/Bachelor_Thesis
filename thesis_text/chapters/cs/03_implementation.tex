@@ -175,6 +175,9 @@ elapsed_time = time.time() - self.start_time
 fps = self.frame_count / elapsed_time
 \end{lstlisting}
 
+\subsection{Implementace referenčního detekčního skriptu pro GPU}
+Pro zajištění porovnatelného referenčního měření na osobním počítači s~\acs{GPU} byl v~adresáři \texttt{pc\_src/} implementován skript \texttt{yoloTrafficDetectionSystem\_PC\_GPU.py}. Namísto frameworku GStreamer využívá pro čtení a~dekódování videa knihovnu \texttt{PyAV} v~odděleném vlákně s~bezztrátovou vyrovnávací frontou (\texttt{queue.Queue}). Samotná inference modelu \texttt{yolov8m.pt} a~sledování objektů algoritmem ByteTrack (konfigurovaným v~souboru \texttt{bytetrack.yaml}) jsou řízeny voláním metody \texttt{model.track(persist=True)} z~knihovny Ultralytics~\cite{ultralytics_yolov8_docs}. Následný výpočet těžiště ohraničujícího rámečku, filtrace průjezdů pětiúhelníkovou zónou \acs{ROI} pomocí knihovny Shapely~\cite{shapely_docs} i~export souhrnných telemetrických statistik do formátu \acs{JSON} (prostřednictvím modulu \texttt{traffic\_stats.py}) pak využívají identickou logiku jako okrajové zařízení.
+
 %Hodnota FPS je využívána jako indikátor výkonnosti celé detekční pipeline a umožňuje ověřit, zda systém splňuje požadavky na real-time zpracování. Díky využití hardwarového akcelerátoru je dosaženo stabilního průběhu zpracování bez významných výkyvů výkonu.
 
 \section{Komunikace, ukládání a vizualizace dat}
@@ -204,7 +207,8 @@ Identifikátor \texttt{track\_id} je označen jako zpracovaný až v~okamžiku �
 %Pro ukládání detekčních událostí byl použit relační databázový systém PostgreSQL. Pro komunikaci mezi aplikací a databází byla využita knihovna Psycopg \cite{psycopg_docs_2025}.
 %Detekční události jsou po přijetí prostřednictvím MQTT zpracovány a následně ukládány do relační databáze PostgreSQL.
 
-Na serverové straně přijímá zprávy samostatný proces (MQTT subscriber). Pro zajištění vysoké propustnosti při komunikaci s~databází PostgreSQL využívá aplikace mechanismus \textit{connection poolingu} (opakované využívání otevřených databázových spojení). Samotný zápis dat do tabulky \texttt{detections} (jejíž schéma bylo definováno v~kapitole~\ref{fig:erd}) je realizován pomocí dávkového vkládání (\texttt{execute\_batch}) z~knihovny Psycopg, které umožňuje vložit až 100 záznamů v~rámci jediné databázové transakce (ukázka~\ref{lst:db_batch}).
+Na serverové straně přijímá zprávy samostatný proces (MQTT subscriber). Pro zajištění vysoké propustnosti při komunikaci s~databází PostgreSQL využívá aplikace mechanismus \textit{connection poolingu} (opakované využívání otevřených databázových spojení). 
+Samotný zápis dat (který pro maximalizaci rychlosti dávkového vkládání v~prototypu využívá denormalizovanou provozní tabulku \texttt{detections}, vycházející z~koncepčního \acs{ER} schématu na obrázku~\ref{fig:erd}) je realizován pomocí funkce \texttt{execute\_batch} z~knihovny Psycopg~\cite{psycopg_docs_2025}, jež umožňuje vložit až 100~záznamů v~rámci jediné databázové transakce (ukázka~\ref{lst:db_batch}).
 
 \begin{lstlisting}[language=Python, caption={Dávkové vkládání detekčních záznamů do databáze PostgreSQL.}, label={lst:db_batch}]
 query = """
@@ -216,8 +220,7 @@ execute_batch(cursor, query, data, page_size=100)
 conn.commit()
 \end{lstlisting}
 
-\subsection{Implementace vizualizačního dashboardu}
-\subsubsection{Implementace aplikačního rozhraní}
+\subsection{Implementace aplikačního rozhraní}
 Zpřístupnění uložených záznamů z~databáze PostgreSQL pro prezentační vrstvu zajišťuje backendový server (\texttt{API\_with\_streamlit.py}) prostřednictvím asynchronních \acs{REST} \acs{API} endpointů ve frameworku FastAPI~\cite{fastapi_docs} (ukázka~\ref{lst:fastapi_endpoint}). Kromě čtení posledních detekcí (\texttt{/api/detections}) a~souhrnných statistik (\texttt{/api/statistics}) poskytuje server také řídicí endpointy pro vzdálené spouštění a~zastavování detekční pipeline.
 
 \begin{lstlisting}[language=Python, caption={Implementace REST API endpointu ve frameworku FastAPI pro čtení detekcí.}, label={lst:fastapi_endpoint}]
@@ -229,7 +232,7 @@ async def get_detections(minutes: int = 5, limit: int = 100):
     return [DetectionResponse(**dict(d)) for d in detections]
 \end{lstlisting}
 
-\subsubsection{Implementace vizualizačního dashboardu}
+\subsection{Implementace vizualizačního dashboardu}
 Samotné uživatelské rozhraní (\texttt{streamlit\_dashboard.py}) je vytvořeno ve frameworku Streamlit~\cite{streamlit_docs} a~načítá data z~backendu přes protokol \acs{HTTP}. Přijatá \acs{JSON} data jsou převedena do struktury \texttt{DataFrame} knihovny Pandas~\cite{mckinney_pandas_2010}, kde probíhá konverze časových razítek na typ \texttt{datetime}. 
 
 Pro dynamickou analýzu vývoje dopravy v~čase využívá aplikace metodu \texttt{resample()}, jež umožňuje uživateli měnit šířku časového okna agregace (např. 1~minuta, 10~minut, 1~hodina) jak globálně, tak pro jednotlivé kategorie vozidel (ukázka~\ref{lst:pandas_resample}).
