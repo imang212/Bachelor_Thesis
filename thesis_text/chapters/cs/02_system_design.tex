@@ -42,6 +42,14 @@ Na základě definovaných funkčních a~nefunkčních požadavků byl pro jedno
     \label{tab:tech_stack}
 \end{table}
 
+Zařazení jednotlivých technologií do funkcích vrstev systému a~vzájemné propojení mezi nimi znázorňuje obrázek~\ref{fig:tech_stack}.
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\textwidth]{images/tech_stack.pdf}
+    \caption{Vrstvené zařazení zvolených technologií do navržené architektury systému.}
+    \label{fig:tech_stack}
+\end{figure}
+
 Volba uvedených technologií vychází z~požadavku na vysokou propustnost zpracování obrazu při zachování nízké výpočetní a~paměťové režie na okrajovém zařízení:
 \begin{itemize}
     \item \textbf{GStreamer a~HailoRT (TAPPAS):} Na rozdíl od konvenčního zpracování obrazu v~čistém jazyce Python (např. čtení snímků ve smyčce knihovny OpenCV~\cite{bradski_opencv_2000}) umožňuje multimediální framework GStreamer~\cite{gstreamer_docs} sestavit datovod z~kompilovaných C/C++ zásuvných modulů. Dekódování síťového \acs{RTSP} streamu, změna rozlišení, inference na akcelerátoru Hailo-8 pomocí knihoven TAPPAS~\cite{tappas_user_guide_331} i~sledování objektů tak probíhají s~přímým předáváním paměťových bufferů bez zbytečného kopírování obrazových matic do paměti interpretu Pythonu.
