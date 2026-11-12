@@ -36,11 +36,34 @@ roi_y = int(640 * 0.85)
 roi_w = int(640 * 0.35)
 roi_h = int(640 * 0.14)
 
-# Vykreslení zeleného obdélníku s popiskem
 cv2.rectangle(cropped_frame, (roi_x, roi_y), (roi_x + roi_w, roi_y + roi_h), (0, 255, 0), 4)
-cv2.putText(cropped_frame, "ROI Zone", (roi_x, roi_y - 10), 
+cv2.putText(cropped_frame, f"ROI Zone", (roi_x, roi_y - 10), 
             cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
+
 # ----------------------------------------------------------------
+## Kótování: vzdálenost ROI od levého a horního okraje výřezu
+#def put_text_outline(img, text, org, scale, color, thickness):
+#    # černý obrys kvůli čitelnosti nad světlým pozadím
+#    cv2.putText(img, text, org, cv2.FONT_HERSHEY_SIMPLEX, scale, (0, 0, 0), thickness + 2)
+#    cv2.putText(img, text, org, cv2.FONT_HERSHEY_SIMPLEX, scale, color, thickness)
+# 
+#dim_color = (0, 255, 0)
+# 
+## Vodorovná kóta: od levého okraje (x=0) k levé hraně ROI, uprostřed výšky ROI
+#mid_y = roi_y + roi_h // 2
+#cv2.arrowedLine(cropped_frame, (6, mid_y), (roi_x, mid_y), dim_color, 2, tipLength=0.2)
+#cv2.arrowedLine(cropped_frame, (roi_x, mid_y), (6, mid_y), dim_color, 2, tipLength=0.2)
+#put_text_outline(cropped_frame, f"x={roi_x} px", (25, mid_y - 16), 0.5, dim_color, 2)
+# 
+## Svislá kóta: od horního okraje (y=0) k horní hraně ROI, uprostřed levého okraje
+#dim_x = roi_x // 2 + 160
+#cv2.arrowedLine(cropped_frame, (dim_x, 6), (dim_x, roi_y), dim_color, 2, tipLength=0.03)
+#cv2.arrowedLine(cropped_frame, (dim_x, roi_y), (dim_x, 6), dim_color, 2, tipLength=0.03)
+#put_text_outline(cropped_frame, f"y={roi_y} px", (dim_x + 10, roi_y // 2), 0.6, dim_color, 2)
+
+
+# Červené ohraničení celého výřezu (YOLO vstup 640x640), kreslí se těsně dovnitř obrazu
+cv2.rectangle(cropped_frame, (2, 2), (637, 637), (0, 0, 255), 4)
 
 # 5. Spojení do jedné koláže
 # Protože levý obrázek má na výšku 720 a pravý 640, musíme levý zmenšit, aby k sobě pasovaly.
