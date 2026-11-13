@@ -1,3 +1,4 @@
+\hypersetup{hidelinks}
 \chapter*{Seznam zkratek} 
 \addcontentsline{toc}{chapter}{Seznam zkratek} %
 \begin{acronym}[DeepSORT]
@@ -18,7 +19,7 @@
     \acro{FPS}{Frames Per Second (Počet zpracovaných snímků za sekundu)}
     \acro{GDPR}{General Data Protection Regulation (Obecné nařízení o~ochraně osobních údajů)}
     \acro{GFLOPs}{Giga Floating Point Operations Per Second (Miliardy operací v~plovoucí řádové čárce za sekundu)}
-    \acro{GPU}{Graphics Processing Unit (grafický procesor)}
+    \acro{GPU}{Graphics Processing Unit (Grafický procesor)}
     \acro{GT}{Ground Truth (Referenční skutečná hodnota stanovená manuální anotací)}
     \acro{HAR}{Hailo Archive (Meziformát archivu modelu před kvantizací)}
     \acro{HEF}{Hailo Executable Format (Spustitelný binární formát modelu pro čipy Hailo)}
@@ -42,7 +43,7 @@
     \acro{PoE}{Power over Ethernet (Technologie pro napájení zařízení po datovém kabelu)}
     \acro{PTQ}{Post-Training Quantization (Post-tréninková kvantizace vah neuronové sítě)}
     \acro{R-CNN}{Region-based Convolutional Neural Network (Architektura dvoufázové detekce objektů)}
-    \acro{RAM}{Random Access Memory (operační paměť s~přímým přístupem)}
+    \acro{RAM}{Random Access Memory (Operační paměť s~přímým přístupem)}
     \acro{REST}{Representational State Transfer (Architektonický styl pro návrh webových rozhraní)}
     \acro{RGB}{Red-Green-Blue (Aditivní barevný prostor složený z~červené, zelené a modré složky)}
     \acro{ROI}{Region of Interest (Oblast zájmu / sledovaný výřez v~obraze)}
@@ -64,6 +65,6 @@ V~reakci na tyto potřeby a v~rámci širšího rozvoje konceptu chytrých měst
 
 S~překotným rozvojem výpočetních technologií a hardwarové miniaturizace se v~této oblasti navíc stále více prosazuje přístup tzv. \acs{Edge AI} (umělá inteligence na okraji sítě). Zpracování rozsáhlých obrazových dat díky tomu již nemusí probíhat ve vzdálených datacentrech, ale je realizováno přímo na okrajových zařízeních v~místě sběru dat. Využití kompaktních jednodeskových počítačů doplněných o~specializované hardwarové AI akcelerátory umožňuje dramatické snížení latence, zvýšení ochrany citlivých osobních údajů a minimalizaci závislosti na stabilním internetovém připojení či cloudových službách. V~dopravních aplikacích, kde je vyžadováno spolehlivé zpracování v~reálném čase, je tento přístup zásadní.
 
-Cílem této bakalářské práce je navrhnout, implementovat a otestovat plně funkční systém pro automatické sčítání a analýzu dopravního provozu, postavený na principech \acs{Edge AI}. Práce se zaměřuje na detekci, sledování a klasifikaci různých účastníků provozu – primárně osobních automobilů, autobusů a nákladních vozidel, případně chodců a cyklistů v~definované lokalitě s~využitím moderních detekčních modelů pro víceobjektové sledování. Důraz je kladen na praktickou realizaci celého řešení na dostupném okrajovém zařízení a na následné vyhodnocení přesnosti detekce i sčítání z~reálných videozáznamů dopravy.
+Cílem této bakalářské práce je navrhnout, implementovat a otestovat plně funkční systém pro automatické sčítání a analýzu dopravního provozu, postavený na principech Edge AI. Práce se zaměřuje na detekci, sledování a klasifikaci různých účastníků provozu – primárně osobních automobilů, autobusů a nákladních vozidel, případně chodců a cyklistů v~definované lokalitě s~využitím moderních detekčních modelů pro víceobjektové sledování. Důraz je kladen na praktickou realizaci celého řešení na dostupném okrajovém zařízení a na následné vyhodnocení přesnosti detekce i sčítání z~reálných videozáznamů dopravy.
 
-Text práce je strukturován do šesti hlavních kapitol. První, teoretická část poskytuje ucelený přehled v~oblastech počítačového vidění, metod detekce a sledování objektů a existujících systémů pro monitorování dopravy. Následně se věnuje specifikům \acs{Edge AI} a etickým aspektům sběru dat. Druhá kapitola přibližuje celkový návrh architektury systému, včetně zdůvodnění výběru hardwarových komponent. Třetí kapitola detailně popisuje samotnou implementaci řešení od přípravy vývojového prostředí až po ukládání a vizualizaci nasbíraných dat. Čtvrtá a pátá kapitola jsou dedikovány testování systému v~reálných scénářích, vyhodnocení přesnosti modelu a diskuzi nad dosaženými výsledky. Závěrečná kapitola pak shrnuje zjištěné poznatky a nastiňuje možnosti budoucího rozvoje vytvořené aplikace.
+Text práce je strukturován do šesti hlavních kapitol. První, teoretická část poskytuje ucelený přehled v~oblastech počítačového vidění, metod detekce a sledování objektů a existujících systémů pro monitorování dopravy. Následně se věnuje specifikům Edge AI a etickým aspektům sběru dat. Druhá kapitola přibližuje celkový návrh architektury systému, včetně zdůvodnění výběru hardwarových komponent. Třetí kapitola detailně popisuje samotnou implementaci řešení od přípravy vývojového prostředí až po ukládání a vizualizaci nasbíraných dat. Čtvrtá a pátá kapitola jsou dedikovány testování systému v~reálných scénářích, vyhodnocení přesnosti modelu a diskuzi nad dosaženými výsledky. Závěrečná kapitola pak shrnuje zjištěné poznatky a nastiňuje možnosti budoucího rozvoje vytvořené aplikace.

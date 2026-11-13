@@ -1,16 +1,40 @@
 \chapter{Externí přílohy}
 \label{app:external}
-
 Zdrojové kódy navrženého systému, instalační a~konfigurační skripty, kontejnerové definice, dokumentace architektury, vyexportované výsledky měření i~samotný text této bakalářské práce jsou uloženy v~přiloženém elektronickém archivu a~verzovány ve veřejném GitHub repozitáři dostupném na adrese: \url{https://github.com/imang212/Bachelor_Thesis}.
 
-Detailní postupy instalace a~konfigurace obou testovaných výpočetních platforem jsou vyčleněny do samostatných adresářů elektronické přílohy a~opírají se o~oficiální dokumentaci výrobců:
+\section*{Získání repozitáře a inicializace velkých souborů (Git LFS)}
+Repozitář využívá rozšíření \textbf{Git LFS} (\textit{Large File Storage}) pro správu objemných binárních souborů, zejména výchozího testovacího videa (\texttt{videos/sample\_video.mp4}) a dokumentů ve formátu PDF. Pro kompletní naklonování projektu včetně binárních příloh použijte v~terminálu následující příkazy:
+
+\begin{lstlisting}[language=bash, caption={Naklonování veřejného repozitáře projektu a inicializace konfigurace.}, label={lst:git_clone}]
+git lfs install
+git clone https://github.com/imang212/Bachelor_Thesis.git
+cd Bachelor_Thesis
+cp .env.example .env
+\end{lstlisting}
+
+\section*{Přehled konfiguračních, instalačních a aplikačních skriptů}
+Detailní postupy instalace, konfigurace a~spouštění obou testovaných výpočetních platforem jsou vyčleněny do samostatných adresářů elektronické přílohy a~opírají se o~oficiální dokumentaci výrobců:
 
 \begin{itemize}
-    \item \textbf{Konfigurace a~instalace okrajového zařízení (Raspberry Pi~5 + Hailo-8):} Nachází se v~adresáři \texttt{rpi\_src/}. Zahrnuje automatizační skript \texttt{autosetup\_hailo\_rpi5.sh} pro přípravu 64bitového systému Raspberry Pi~\acs{OS} (Debian Bookworm)~\cite{raspberrypi_docs_2024}, aktivaci sběrnice \acs{PCIe} Gen~3, instalaci ovladačů modulu AI HAT+~\cite{raspberrypi_ai_kit}, prostředí HailoRT, knihoven TAPPAS~\cite{tappas_user_guide_331} a~multimediálního frameworku GStreamer~\cite{gstreamer_docs}. Skript \texttt{autorun.sh} následně zajišťuje automatické spouštění detekční pipeline, databázového odběratele a~webového rozhraní po startu systému (doplněné o~manuál v~\texttt{rpi\_src/pipeline/script-guide.md}).
-    \item \textbf{Konfigurace a~instalace referenční stanice (PC + NVIDIA \acs{GPU}):} Nachází se v~adresáři \texttt{pc\_src/} (pro inferenci v~prostředí CUDA s~knihovnami Ultralytics~\cite{ultralytics_yolov8_docs}, OpenCV~\cite{bradski_opencv_2000} a~algoritmem ByteTrack~\cite{zhang_bytetrack_2022} dle \texttt{pc\_src/requirements.txt} a~\texttt{pc\_src/docker-compose.yml}) a~v~adresáři \texttt{rpi\_src/model\_compile/} (pro kompilaci a~8bitovou kvantizaci modelů do formátu \acs{HEF} pomocí nástrojů Hailo Dataflow Compiler~\cite{hailo_dfc_docs} a~Hailo Model Zoo~\cite{hailo_model_zoo}).
+    \item \textbf{Konfigurace a~instalace okrajového zařízení (Raspberry Pi~5 + Hailo-8, adresář \href{https://github.com/imang212/Bachelor_Thesis/tree/main/rpi_src}{\texttt{rpi\_src/}}):}
+    \begin{itemize}
+        \item \href{https://github.com/imang212/Bachelor_Thesis/blob/main/rpi_src/autosetup_hailo_rpi5.sh}{\texttt{autosetup\_hailo\_rpi5.sh}} – vícefázový automatizační Bash skript (s~podporou automatického pokračování po restartu přes \texttt{systemd}) pro přípravu 64bitového systému Raspberry Pi~OS (Debian Bookworm)~\cite{raspberrypi_docs_2024}, aktivaci sběrnice \acs{PCIe} Gen~3.0, instalaci ovladačů modulu AI~HAT+~\cite{raspberrypi_ai_kit}, běhového prostředí HailoRT, knihoven TAPPAS~\cite{tappas_user_guide_331} a~multimediálního frameworku GStreamer~\cite{gstreamer_docs}.
+        \item \href{https://github.com/imang212/Bachelor_Thesis/blob/main/rpi_src/autorun.sh}{\texttt{autorun.sh}} – konfigurační skript zajišťující bezobslužné spouštění detekční pipeline, databázového odběratele a~webového rozhraní po startu operačního systému.
+        \item \href{https://github.com/imang212/Bachelor_Thesis/blob/main/rpi_src/pipeline/script-guide.md}{\texttt{pipeline/script-guide.md}} – praktický manuál pro manuální instalaci balíčků Hailo, stahování ovladačů z~portálu Hailo Developer Zone a~diagnostické testování GStreamer řetězců (\texttt{gst-launch-1.0}).
+        \item \href{https://github.com/imang212/Bachelor_Thesis/blob/main/rpi_src/pipeline/DetectionWithGStreamer_pipeline.py}{\texttt{pipeline/DetectionWithGStreamer\_pipeline.py}} – hlavní detekční a~sledovací modul sestavující GStreamer pipeline s~prvky Hailo, geometrickou filtrací v~knihovně Shapely a~publikováním událostí přes protokol \acs{MQTT}.
+        \item \href{https://github.com/imang212/Bachelor_Thesis/blob/main/rpi_src/pipeline/API_with_streamlit.py}{\texttt{pipeline/API\_with\_streamlit.py}} a~\href{https://github.com/imang212/Bachelor_Thesis/blob/main/rpi_src/pipeline/streamlit_dashboard.py}{\texttt{pipeline/streamlit\_dashboard.py}} – aplikační backend ve frameworku FastAPI a~interaktivní analytický dashboard ve frameworku Streamlit.
+    \end{itemize}
+
+    \item \textbf{Konfigurace a~instalace referenční stanice (PC + NVIDIA GPU, adresář \href{https://github.com/imang212/Bachelor_Thesis/tree/main/pc_src}{\texttt{pc\_src/}}) a~kompilace modelů (\href{https://github.com/imang212/Bachelor_Thesis/tree/main/rpi_src/model_compile}{\texttt{rpi\_src/model\_compile/}}):}
+    \begin{itemize}
+        \item \href{https://github.com/imang212/Bachelor_Thesis/blob/main/pc_src/yoloTrafficDetectionSystem_PC_GPU.py}{\texttt{yoloTrafficDetectionSystem\_PC\_GPU.py}} a~\href{https://github.com/imang212/Bachelor_Thesis/blob/main/pc_src/traffic_stats.py}{\texttt{traffic\_stats.py}} – referenční detekční skript a~statistický modul pro inferenci v~prostředí CUDA s~knihovnami Ultralytics~\cite{ultralytics_yolov8_docs}, OpenCV~\cite{bradski_opencv_2000} a~sledovacím algoritmem ByteTrack~\cite{zhang_bytetrack_2022} (konfigurace v~\href{https://github.com/imang212/Bachelor_Thesis/blob/main/pc_src/bytetrack.yaml}{\texttt{bytetrack.yaml}}).
+        \item \href{https://github.com/imang212/Bachelor_Thesis/blob/main/pc_src/requirements.txt}{\texttt{pc\_src/requirements.txt}} a~\href{https://github.com/imang212/Bachelor_Thesis/blob/main/pc_src/docker-compose.yml}{\texttt{pc\_src/docker-compose.yml}} – specifikace softwarových závislostí a~kontejnerová orchestrace referenčního GPU prostředí s~databází PostgreSQL.
+        \item \href{https://github.com/imang212/Bachelor_Thesis/blob/main/rpi_src/model_compile/model_export.py}{\texttt{model\_export.py}}, \href{https://github.com/imang212/Bachelor_Thesis/blob/main/rpi_src/model_compile/calib_dataset_create.py}{\texttt{calib\_dataset\_create.py}} a~\href{https://github.com/imang212/Bachelor_Thesis/blob/main/rpi_src/model_compile/model_compilation.ipynb}{\texttt{model\_compilation.ipynb}} – skripty a~interaktivní Jupyter Notebook pro export modelu do formátu \acs{ONNX}, přípravu kalibračního datasetu a~8bitovou kvantizaci a~kompilaci do formátu \acs{HEF} pomocí nástrojů Hailo Dataflow Compiler~\cite{hailo_dfc_docs} a~Hailo Model Zoo~\cite{hailo_model_zoo}.
+    \end{itemize}
 \end{itemize}
 
 Struktura všech hlavních adresářů a~souborů přiloženého úložiště je popsána v~tabulce~\ref{tab:repo_structure}.
+
 \begin{table}[H]
     \centering
     \renewcommand{\arraystretch}{1.2}
@@ -26,7 +50,7 @@ Struktura všech hlavních adresářů a~souborů přiloženého úložiště je
         \texttt{tests/} & Sada automatizovaných jednotkových testů (\texttt{pytest}) ověřujících konfigurační logiku, přihlašování (MQTT, Databáze) a připojování (IP kamera), geometrickou filtraci zóny \acs{ROI} a~sdílené moduly. \\ \hline
         \texttt{docs/} & Technická dokumentace projektu obsahující architektonická schémata (\texttt{diagrams/}) a~zdrojové Python skripty pro generování \acs{UML} a~\acs{ER} diagramů (\texttt{diagrams/scripts/}) ve formátu Mermaid. \\ \hline
         \texttt{thesis\_text/} & Zdrojové kódy textu bakalářské práce v~systému \LaTeX{} (\texttt{Bachelor\_Thesis\_CS.tex}), rozdělené kapitoly (\texttt{chapters/cs/}), bibliografie (\texttt{references.bib}), složku s~prostudovanou literaturou a~grafické přílohy (\texttt{images/}). \\ \hline
-        \texttt{.env.example} & Šablona konfiguračního souboru pro nastavení proměnných prostředí (databáze, \acs{MQTT} broker, \acs{RTSP} stream) bez citlivých hesel. \\ \hline
+        \texttt{.env.example} & Šablona konfiguračního souboru pro nastavení proměnných prostředí (databáze, MQTT broker, \acs{RTSP} stream) bez citlivých hesel. \\ \hline
     \end{tabular}
     \caption{Struktura přiloženého elektronického úložiště projektu.}
     \label{tab:repo_structure}

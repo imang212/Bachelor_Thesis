@@ -16,22 +16,22 @@ První část této kapitoly se věnuje modularizaci zdrojového kódu, správě
 \section{Modularizace kódu, správa konfigurace a kontejnerizace}
 Pro zajištění udržitelnosti kódu a~eliminaci duplicit mezi okrajovým zařízením (\texttt{rpi\_src/}) a~referenční pracovní stanicí (\texttt{pc\_src/}) byla společná infrastruktura vyčleněna do sdíleného balíčku \texttt{common/}. Tento modul zapouzdřuje správu databázových spojení (\texttt{PostgreDatabaseManager}), komunikačního klienta (\texttt{MQTTPublisher}) a~centralizované načítání konfigurace (\texttt{config.py}). Webová část na okrajovém zařízení byla rovněž rozdělena na samostatný backendový server (\texttt{API\_with\_streamlit.py}) a~prezentační rozhraní (\texttt{streamlit\_dashboard.py}).
 
-Z~hlediska kybernetické bezpečnosti jsou veškeré citlivé přihlašovací údaje (hesla k~databázi PostgreSQL, přístupové údaje k~\acs{MQTT} brokeru a~autentizační URL adresy \acs{RTSP} kamerových toků) odděleny od zdrojového kódu a~načítány dynamicky z~proměnných prostředí prostřednictvím souboru \texttt{.env} (v~repozitáři je verzována pouze anonymizovaná šablona \texttt{.env.example}).
+Z~hlediska kybernetické bezpečnosti jsou veškeré citlivé přihlašovací údaje (hesla k~databázi PostgreSQL, přístupové údaje k~MQTT brokeru a~autentizační URL adresy \acs{RTSP} kamerových toků) odděleny od zdrojového kódu a~načítány dynamicky z~proměnných prostředí prostřednictvím souboru \texttt{.env} (v~repozitáři je verzována pouze anonymizovaná šablona \texttt{.env.example}).
 
 Pro usnadnění replikovatelnosti experimentů a~rychlé nasazení bez nutnosti manuální instalace závislostí (popsané v~externí příloze~\ref{app:external}) byla implementována podpora kontejnerizace pomocí platformy Docker~\cite{docker_docs} a~nástroje Docker Compose:
 \begin{itemize}
-    \item \textbf{Kontejnerizované referenční prostředí (\texttt{pc\_src/docker-compose.yml}):} Definuje kompletní stoh služeb zahrnující databázi PostgreSQL (s~automatickou inicializací schématu pomocí skriptu \texttt{init\_hailo.sql}) a~výpočetní kontejner s~akcelerací NVIDIA \acs{GPU} pro běh referenčního detekčního skriptu.
-    \item \textbf{Simulační prostředí (\texttt{rpi\_src/docker/}):} Umožňuje otestovat průchod dat celým řetězcem (od simulovaného publikování \acs{MQTT} událostí přes databázovou vrstvu až po vykreslení ve webovém dashboardu) v~izolovaných kontejnerech i~na zařízeních bez fyzicky připojeného akcelerátoru Hailo-8.
-    \item \textbf{Automatizované testování a~CI/CD pipeline (\texttt{tests/}, \texttt{.github/workflows/}):} Pro ověření spolehlivosti klíčových komponent byla pomocí frameworku \texttt{pytest} vytvořena sada jednotkových testů (\texttt{test\_common.py}), která testuje načítání konfigurace, sestavování \acs{RTSP} a~databázových spojení a~geometrickou logiku rozhodování o~přítomnosti bodu uvnitř polygonu \acs{ROI}. Tyto testy jsou spolu s~validací syntaxe Docker Compose souborů a~Kubernetes manifestů automaticky spouštěny při každé změně kódu v~rámci CI/CD pipeline v~prostředí GitHub Actions (\texttt{ci.yml}).
+    \item \textbf{Kontejnerizované referenční prostředí (\texttt{pc\_src/docker-compose.yml}):} Definuje kompletní stoh služeb zahrnující databázi PostgreSQL (s~automatickou inicializací schématu pomocí skriptu \texttt{init\_hailo.sql}) a~výpočetní kontejner s~akcelerací NVIDIA GPU pro běh referenčního detekčního skriptu. 
+    \item \textbf{Simulační prostředí (\texttt{rpi\_src/docker/}):} Umožňuje otestovat průchod dat celým řetězcem (od simulovaného publikování MQTT událostí přes databázovou vrstvu až po vykreslení ve webovém dashboardu) v~izolovaných kontejnerech i~na zařízeních bez fyzicky připojeného akcelerátoru Hailo-8.
+    \item \textbf{Automatizované testování a~CI/CD pipeline (\texttt{tests/}, \texttt{.github/workflows/}):} Pro ověření spolehlivosti klíčových komponent byla pomocí frameworku \texttt{pytest} vytvořena sada jednotkových testů (\texttt{test\_common.py}), která testuje načítání konfigurace, sestavování RTSP a~databázových spojení a~geometrickou logiku rozhodování o~přítomnosti bodu uvnitř polygonu \acs{ROI}. Tyto testy jsou spolu s~validací syntaxe Docker Compose souborů a~Kubernetes manifestů automaticky spouštěny při každé změně kódu v~rámci CI/CD pipeline v~prostředí GitHub Actions (\texttt{ci.yml}).
 \end{itemize}
 
 \section{Příprava a kompilace detekčního modelu}
 \subsection{Volba varianty modelu a předzpracování}
 %Pro detekci objektů byl zvolen model architektury YOLO (You Only Look Once), který je navržen pro real-time detekci objektů v jednom průchodu neuronovou sítí \cite{redmon_yolo_2016}. Modely YOLO jsou známé vysokým poměrem mezi přesností a rychlostí inference, což je klíčové pro nasazení na vestavěné edge platformě.
 
-V~rámci implementace nebyl detekční model trénován od začátku, ale byl využit předtrénovaný model \texttt{YOLOv8m} (natrénovaný na referenčním datasetu \acs{COCO}~\cite{lin_coco_2014}), který byl zvolen i~pro finální nasazení systému. Pro zprovoznění modelu na akcelerátoru Hailo-8 lze buď provést vlastní kompilaci do binárního formátu \acs{HEF} (\textit{Hailo Executable Format}) pomocí nástroje Hailo Dataflow Compiler (\acs{DFC})~\cite{hailo_dfc_docs}, nebo využít oficiálně předkompilované modely z~repozitáře Hailo RPi5 Examples~\cite{hailo_rpi5_examples}.
+V~rámci implementace nebyl detekční model trénován od začátku, ale byl využit předtrénovaný model \texttt{YOLOv8m} (natrénovaný na referenčním datasetu \acs{COCO}~\cite{lin_coco_2014}), který byl zvolen i~pro finální nasazení systému. Pro zprovoznění modelu na akcelerátoru Hailo-8 lze buď provést vlastní kompilaci do binárního formátu HEF (\textit{Hailo Executable Format}) pomocí nástroje Hailo Dataflow Compiler (\acs{DFC})~\cite{hailo_dfc_docs}, nebo využít oficiálně předkompilované modely z~repozitáře Hailo RPi5 Examples~\cite{hailo_rpi5_examples}.
 
-Během vývoje byly v~rámci experimentů zkompilovány a~otestovány vlastní varianty \texttt{YOLOv8n}, \texttt{YOLOv8s} a~\texttt{YOLOv8m} (kompilační skripty a~postup jsou zdokumentovány níže a~přiloženy ve složce \texttt{rpi\_src/model\_compile/}). Při praktickém spuštění těchto vlastnoručně zkompilovaných souborů \acs{HEF} v~detekční pipeline se však projevila nekompatibilita výstupních post-processingových vrstev s~cílovým prostředím, v~jejímž důsledku inference neprobíhala na akcelerátoru Hailo-8, ale přesměrovala se na hlavní procesor (\acs{CPU}) a~dosahovala propustnosti pouze kolem 2~\acs{FPS}. Pro finální nasazení a~měření byla proto zvolena oficiálně předzpracovaná a~plně hardwarově akcelerovaná varianta \texttt{yolov8m.hef} z~knihovny \texttt{hailo-rpi5-examples}~\cite{hailo_rpi5_examples}, která vykazovala optimální kompromis mezi rychlostí inference a~přesností detekce vzdálenějších vozidel. Před samotnou inferencí jsou vstupní snímky vždy převzorkovány na rozlišení $640 \times 640$~pixelů a~převedeny do barevného formátu \acs{RGB}.
+Během vývoje byly v~rámci experimentů zkompilovány a~otestovány vlastní varianty \texttt{YOLOv8n}, \texttt{YOLOv8s} a~\texttt{YOLOv8m} (kompilační skripty a~postup jsou zdokumentovány níže a~přiloženy ve složce \texttt{rpi\_src/model\_compile/}). Při praktickém spuštění těchto vlastnoručně zkompilovaných souborů HEF v~detekční pipeline se však projevila nekompatibilita výstupních post-processingových vrstev s~cílovým prostředím, v~jejímž důsledku inference neprobíhala na akcelerátoru Hailo-8, ale přesměrovala se na hlavní procesor (\acs{CPU}) a~dosahovala propustnosti pouze kolem 2~\acs{FPS}. Pro finální nasazení a~měření byla proto zvolena oficiálně předzpracovaná a~plně hardwarově akcelerovaná varianta \texttt{yolov8m.hef} z~knihovny \texttt{hailo-rpi5-examples}~\cite{hailo_rpi5_examples}, která vykazovala optimální kompromis mezi rychlostí inference a~přesností detekce vzdálenějších vozidel. Před samotnou inferencí jsou vstupní snímky vždy převzorkovány na rozlišení $640 \times 640$~pixelů a~převedeny do barevného formátu \acs{RGB}.
 
 \subsection{Export modelu do formátu ONNX}
 Prvním krokem přípravy pro kompilátor Hailo DFC je převod vah modelu z~nativního formátu PyTorch (\texttt{.pt}) do standardizovaného meziformátu ONNX (\textit{Open Neural Network Exchange}). Export byl proveden pomocí knihovny Ultralytics~\cite{ultralytics_yolov8_docs} s~pevně definovanou velikostí vstupu a zjednodušením výpočetního grafu (ukázka~\ref{lst:onnx_export}).
@@ -69,7 +69,7 @@ hailomz compile yolov8m \
     --classes 80
 \end{lstlisting}
 
-Přestože vlastní kompilace generovala validní soubory \texttt{.hef}, vzhledem k~výše popsanému propadu výkonu při neúplném mapování grafu na akcelerátor (~2~\acs{FPS} při běhu na \acs{CPU}) byl pro ostrý provoz na zařízení Raspberry Pi~5 nasazen referenční předkompilovaný soubor \texttt{yolov8m.hef} z~oficiálního repozitáře~\cite{hailo_rpi5_examples}, který plně využívá hardwarové zdroje čipu Hailo-8 při nízké latenci a~spotřebě energie.
+Přestože vlastní kompilace generovala validní soubory \texttt{.hef}, vzhledem k~výše popsanému propadu výkonu při neúplném mapování grafu na akcelerátor (~2~FPS při běhu na CPU) byl pro ostrý provoz na zařízení Raspberry Pi~5 nasazen referenční předkompilovaný soubor \texttt{yolov8m.hef} z~oficiálního repozitáře~\cite{hailo_rpi5_examples}, který plně využívá hardwarové zdroje čipu Hailo-8 při nízké latenci a~spotřebě energie.
 
 \section{Implementace zpracování videa a detekce}
 
@@ -91,9 +91,10 @@ pipeline_str = (
 )
 \end{lstlisting}
 
-Samotnou inferenci na akcelerátoru zajišťuje prvek \texttt{hailonet}. Parametr \texttt{batch-size=1} garantuje, že každý přijatý snímek je zpracován okamžitě bez čekání na naplnění dávky více snímků, což minimalizuje latenci. Parametry \texttt{nms-score-threshold} a \texttt{nms-iou-threshold} konfigurují algoritmus \textit{Non-Maximum Suppression} (NMS), jenž filtruje detekce s~nízkou spolehlivostí a odstraňuje vícenásobné překrývající se rámečky nad stejným vozidlem. Následující prvek \texttt{hailofilter} provádí post-processing tenzorů a~modul \texttt{hailotracker}, pracující na principu algoritmu \acs{SORT}~\cite{SORT_original_2016} (kombinujícího Kalmanův filtr s~párováním pomocí metriky \acs{IoU}), přiřazuje objektům sledovací identifikátory na základě překryvu (\texttt{iou-thr=0.5})~\cite{tappas_user_guide_331}.
+Samotnou inferenci na akcelerátoru zajišťuje prvek \texttt{hailonet}. Parametr \texttt{batch-size=1} garantuje, že každý přijatý snímek je zpracován okamžitě bez čekání na naplnění dávky více snímků, což minimalizuje latenci. Parametry \texttt{nms-score-threshold} a \texttt{nms-iou-threshold} konfigurují algoritmus \textit{Non-Maximum Suppression} (\acs{NMS}), jenž filtruje detekce s~nízkou spolehlivostí a odstraňuje vícenásobné překrývající se rámečky nad stejným vozidlem. Následující prvek \texttt{hailofilter} provádí post-processing tenzorů a~modul \texttt{hailotracker}, pracující na principu algoritmu \acs{SORT}~\cite{SORT_original_2016} (kombinujícího Kalmanův filtr s~párováním pomocí metriky \acs{IoU}), přiřazuje objektům sledovací identifikátory na základě překryvu (\texttt{iou-thr=0.5})~\cite{tappas_user_guide_331}.
 
 Pro účely ladění nebo paralelního ukládání záznamu lze pipeline na konci rozvětvit pomocí prvku \texttt{tee}, který duplikuje datový tok do více nezávislých větví a tím umožňuje paralelní zpracování výstupu z~pipeline, např. pro současné streamování a ukládání videa (ukázka~\ref{lst:gst_tee}).
+\newpage
 
 \begin{lstlisting}[language=Python, caption={Větvení výstupu pipeline pomocí prvku tee.}, label={lst:gst_tee}]
 pipeline_str += "! tee name=t "
@@ -163,11 +164,13 @@ with self.lock:
 
 %Výpočet FPS je realizován průběžně během běhu pipeline na základě počtu zpracovaných snímků a uplynulého času:
 
-Pro průběžné sledování výkonnosti pipeline je přímo v~callback funkci implementován výpočet snímkové frekvence \acs{FPS} podle vztahu:
+Pro průběžné sledování výkonnosti pipeline je přímo v~callback funkci implementován výpočet snímkové frekvence FPS podle vztahu:
 \[
 \text{FPS} = \frac{N_{\text{frames}}}{t}
 \]
 kde $N_{\text{frames}}$ představuje celkový počet zpracovaných snímků od spuštění měření a $t$ je uplynulý čas v~sekundách (ukázka~\ref{lst:fps_calc}).
+
+\newpage
 
 \begin{lstlisting}[language=Python, caption={Průběžný výpočet FPS během běhu pipeline.}, label={lst:fps_calc}]
 self.frame_count += 1
@@ -176,14 +179,14 @@ fps = self.frame_count / elapsed_time
 \end{lstlisting}
 
 \subsection{Implementace referenčního detekčního skriptu pro GPU}
-Pro zajištění porovnatelného referenčního měření na osobním počítači s~\acs{GPU} byl v~adresáři \texttt{pc\_src/} implementován skript \texttt{yoloTrafficDetectionSystem\_PC\_GPU.py}. Namísto frameworku GStreamer využívá pro čtení a~dekódování videa knihovnu \texttt{PyAV} v~odděleném vlákně s~bezztrátovou vyrovnávací frontou (\texttt{queue.Queue}). Samotná inference modelu \texttt{yolov8m.pt} a~sledování objektů algoritmem ByteTrack (konfigurovaným v~souboru \texttt{bytetrack.yaml}) jsou řízeny voláním metody \texttt{model.track(persist=True)} z~knihovny Ultralytics~\cite{ultralytics_yolov8_docs}. Následný výpočet těžiště ohraničujícího rámečku, filtrace průjezdů pětiúhelníkovou zónou \acs{ROI} pomocí knihovny Shapely~\cite{shapely_docs} i~export souhrnných telemetrických statistik do formátu \acs{JSON} (prostřednictvím modulu \texttt{traffic\_stats.py}) pak využívají identickou logiku jako okrajové zařízení.
+Pro zajištění porovnatelného referenčního měření na osobním počítači s~GPU byl v~adresáři \texttt{pc\_src/} implementován skript \texttt{yoloTrafficDetectionSystem\_PC\_GPU.py}. Namísto frameworku GStreamer využívá pro čtení a~dekódování videa knihovnu \texttt{PyAV} v~odděleném vlákně s~bezztrátovou vyrovnávací frontou (\texttt{queue.Queue}). Samotná inference modelu \texttt{yolov8m.pt} a~sledování objektů algoritmem ByteTrack (konfigurovaným v~souboru \texttt{bytetrack.yaml}) jsou řízeny voláním metody \texttt{model.track(persist=True)} z~knihovny Ultralytics~\cite{ultralytics_yolov8_docs}. Následný výpočet těžiště ohraničujícího rámečku, filtrace průjezdů pětiúhelníkovou zónou ROI pomocí knihovny Shapely~\cite{shapely_docs} i~export souhrnných telemetrických statistik do formátu \acs{JSON} (prostřednictvím modulu \texttt{traffic\_stats.py}) pak využívají identickou logiku jako okrajové zařízení.
 
 %Hodnota FPS je využívána jako indikátor výkonnosti celé detekční pipeline a umožňuje ověřit, zda systém splňuje požadavky na real-time zpracování. Díky využití hardwarového akcelerátoru je dosaženo stabilního průběhu zpracování bez významných výkyvů výkonu.
 
 \section{Komunikace, ukládání a vizualizace dat}
 
 \subsection{Publikace událostí přes MQTT}
-Nově zaznamenané průjezdy vozidel zónou ROI jsou zformátovány do podoby slovníku, který obsahuje identifikátor a název třídy, míru spolehlivosti, souřadnice rámečku, sledovací ID a časové razítko. Pokud seznam obsahuje nové události a spojení s~MQTT~\cite{mqtt_oasis_2019} brokerem je aktivní, data jsou serializována do formátu \acs{JSON} a publikována do příslušného tématu (ukázka~\ref{lst:mqtt_pub}).
+Nově zaznamenané průjezdy vozidel zónou ROI jsou zformátovány do podoby slovníku, který obsahuje identifikátor a název třídy, míru spolehlivosti, souřadnice rámečku, sledovací ID a časové razítko. Pokud seznam obsahuje nové události a spojení s~MQTT~\cite{mqtt_oasis_2019} brokerem je aktivní, data jsou serializována do formátu JSON a publikována do příslušného tématu (ukázka~\ref{lst:mqtt_pub}).
 
 \begin{lstlisting}[language=Python, caption={Sestavení a publikace detekčních událostí přes MQTT.}, label={lst:mqtt_pub}]
 detection_dict = {
@@ -233,7 +236,7 @@ async def get_detections(minutes: int = 5, limit: int = 100):
 \end{lstlisting}
 
 \subsection{Implementace vizualizačního dashboardu}
-Samotné uživatelské rozhraní (\texttt{streamlit\_dashboard.py}) je vytvořeno ve frameworku Streamlit~\cite{streamlit_docs} a~načítá data z~backendu přes protokol \acs{HTTP}. Přijatá \acs{JSON} data jsou převedena do struktury \texttt{DataFrame} knihovny Pandas~\cite{mckinney_pandas_2010}, kde probíhá konverze časových razítek na typ \texttt{datetime}. 
+Samotné uživatelské rozhraní (\texttt{streamlit\_dashboard.py}) je vytvořeno ve frameworku Streamlit~\cite{streamlit_docs} a~načítá data z~backendu přes protokol \acs{HTTP}. Přijatá JSON data jsou převedena do struktury \texttt{DataFrame} knihovny Pandas~\cite{mckinney_pandas_2010}, kde probíhá konverze časových razítek na typ \texttt{datetime}. 
 
 Pro dynamickou analýzu vývoje dopravy v~čase využívá aplikace metodu \texttt{resample()}, jež umožňuje uživateli měnit šířku časového okna agregace (např. 1~minuta, 10~minut, 1~hodina) jak globálně, tak pro jednotlivé kategorie vozidel (ukázka~\ref{lst:pandas_resample}).
 

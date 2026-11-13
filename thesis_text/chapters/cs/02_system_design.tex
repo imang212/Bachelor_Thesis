@@ -13,7 +13,7 @@ Mezi hlavní funkční požadavky patří:
     \item detekce vozidel v~obrazové sekvenci,
     \item klasifikace detekovaných vozidel do kategorií,
     \item sledování klasifikovaných objektů napříč jednotlivými snímky,
-    \item identifikace průjezdu klasifikovaných objektů definovanou oblastí zájmu (\acs{ROI}),
+    \item identifikace průjezdu klasifikovaných objektů definovanou oblastí zájmu (ROI),
     \item ukládání detekčních událostí do databáze,
     \item vizualizace agregovaných statistik.
 \end{itemize}
@@ -28,11 +28,11 @@ Na základě definovaných funkčních a~nefunkčních požadavků byl pro jedno
     \begin{tabular}{|l|l|}
         \hline
         \textbf{Komponenta systému} & \textbf{Zvolená technologie} \\ \hline
-        Operační systém (Edge) & Raspberry Pi \acs{OS} (Debian Linux)~\cite{raspberrypi_docs_2024} \\ \hline
+        Operační systém (Edge) & Raspberry Pi OS (Debian Linux)~\cite{raspberrypi_docs_2024} \\ \hline
         Programovací jazyk & Python 3.11~\cite{python_docs_313_2025} \\ \hline
         Zpracování videa & GStreamer~\cite{gstreamer_docs} \\ \hline
         AI inference a sledování & HailoRT + TAPPAS (YOLO)~\cite{tappas_user_guide_331, ultralytics_yolov8_docs} \\ \hline
-        Geometrická filtrace \acs{ROI} & Shapely~\cite{shapely_docs} \\ \hline
+        Geometrická filtrace ROI & Shapely~\cite{shapely_docs} \\ \hline
         Komunikační protokol & MQTT (Paho-MQTT)~\cite{mqtt_oasis_2019} \\ \hline
         Databázové úložiště & PostgreSQL + Psycopg~\cite{psycopg_docs_2025} \\ \hline
         Backend a REST API & FastAPI + Pandas / NumPy~\cite{fastapi_docs, mckinney_pandas_2010, harris_numpy_2020} \\ \hline
@@ -42,19 +42,24 @@ Na základě definovaných funkčních a~nefunkčních požadavků byl pro jedno
     \label{tab:tech_stack}
 \end{table}
 
-Zařazení jednotlivých technologií do funkcích vrstev systému a~vzájemné propojení mezi nimi znázorňuje obrázek~\ref{fig:tech_stack}.
+Zařazení jednotlivých technologií do čtyř funkčních vrstev systému a~způsob jejich vzájemného propojení znázorňuje obrázek~\ref{fig:tech_stack}.
+
 \begin{figure}[H]
-    \centering
-    \includegraphics[width=0.85\textwidth]{images/tech_stack.pdf}
+    \centering    \includegraphics[width=0.85\textwidth]{images/tech_stack.pdf}
     \caption{Vrstvené zařazení zvolených technologií do navržené architektury systému.}
     \label{fig:tech_stack}
 \end{figure}
 
-Volba uvedených technologií vychází z~požadavku na vysokou propustnost zpracování obrazu při zachování nízké výpočetní a~paměťové režie na okrajovém zařízení:
+Volba uvedených technologií v~jednotlivých vrstvách diagramu vychází z~požadavku na vysokou propustnost zpracování obrazu při zachování nízké výpočetní a~paměťové režie na okrajovém zařízení:
 \begin{itemize}
-    \item \textbf{GStreamer a~HailoRT (TAPPAS):} Na rozdíl od konvenčního zpracování obrazu v~čistém jazyce Python (např. čtení snímků ve smyčce knihovny OpenCV~\cite{bradski_opencv_2000}) umožňuje multimediální framework GStreamer~\cite{gstreamer_docs} sestavit datovod z~kompilovaných C/C++ zásuvných modulů. Dekódování síťového \acs{RTSP} streamu, změna rozlišení, inference na akcelerátoru Hailo-8 pomocí knihoven TAPPAS~\cite{tappas_user_guide_331} i~sledování objektů tak probíhají s~přímým předáváním paměťových bufferů bez zbytečného kopírování obrazových matic do paměti interpretu Pythonu.
-    \item \textbf{Shapely a~protokol \acs{MQTT}:} Knihovna Shapely~\cite{shapely_docs} poskytuje optimalizované planární geometrické operace v~jazyce C (GEOS), které umožňují okamžité vyhodnocení přítomnosti těžiště vozidla v~nepravidelném polygonu \acs{ROI}. Lehký binární protokol \acs{MQTT}~\cite{mqtt_oasis_2019} zajišťuje asynchronní přenos metadat s~minimální síťovou režií a~odděluje detekční uzel od databázového serveru.
-    \item \textbf{PostgreSQL, FastAPI, Streamlit a~Docker:} Relační databázový systém PostgreSQL s~adaptérem Psycopg~\cite{psycopg_docs_2025} byl zvolen pro svou nativní podporu časových typů s~časovou zónou (\texttt{TIMESTAMPTZ}), geometrických datových typů (\texttt{POINT}) a~efektivního dávkového vkládání. Backendový framework FastAPI~\cite{fastapi_docs} v~kombinaci s~knihovnami Pandas~\cite{mckinney_pandas_2010} a~NumPy~\cite{harris_numpy_2020} poskytuje rychlé asynchronní \acs{REST} \acs{API}, na které navazuje webový dashboard v~nástrojích Streamlit~\cite{streamlit_docs} a~Plotly~\cite{plotly_docs_2015}. Platforma Docker~\cite{docker_docs} pak zaručuje plnou reprodukovatelnost a~izolaci prostředí.
+    \item \textbf{Raspberry Pi~OS (Debian Linux) a~Python~3.11:} Základ okrajové (\textit{Edge}) vrstvy tvoří 64bitový operační systém Raspberry Pi~OS~\cite{raspberrypi_docs_2024}, který zajišťuje přímou podporu sběrnice \acs{PCIe} a~jaderných ovladačů akcelerátoru Hailo-8. Jako hlavní řídicí a~integrační jazyk celé aplikace byl zvolen Python~3.11~\cite{python_docs_313_2025} pro svou širokou podporu knihoven počítačového vidění, datové analytiky a~síťové komunikace.
+    \item \textbf{GStreamer a~HailoRT (TAPPAS):} Na rozdíl od konvenčního zpracování obrazu v~čistém jazyce Python (např. čtení snímků ve smyčce knihovny OpenCV~\cite{bradski_opencv_2000}) umožňuje multimediální framework GStreamer~\cite{gstreamer_docs} v~\textit{Edge} vrstvě sestavit datovod z~kompilovaných C/C++ zásuvných modulů. Dekódování síťového \acs{RTSP} streamu, změna rozlišení, inference modelu \acs{YOLO}~\cite{ultralytics_yolov8_docs} na akcelerátoru Hailo-8 pomocí knihoven TAPPAS~\cite{tappas_user_guide_331} i~sledování objektů tak probíhají s~přímým předáváním paměťových bufferů bez zbytečného kopírování obrazových matic do paměti interpretu Pythonu.
+    \item \textbf{Shapely:} Knihovna Shapely~\cite{shapely_docs} poskytuje v~\textit{Edge vrstvě} optimalizované planární geometrické operace v~jazyce C (GEOS), které umožňují okamžité vyhodnocení přítomnosti těžiště vozidla v~nepravidelném polygonu ROI.
+    \item \textbf{Protokol MQTT (Paho-MQTT):} Lehký binární protokol MQTT~\cite{mqtt_oasis_2019} zajišťuje v~\textit{Komunikační} vrstvě asynchronní přenos metadat ve formátu \acs{JSON} s~minimální síťovou režií a~zcela odděluje detekční uzel od databázového serveru.
+    \item \textbf{PostgreSQL a~Psycopg:} Relační databázový systém PostgreSQL s~adaptérem Psycopg~\cite{psycopg_docs_2025} byl v~\textit{Backendové vrstvě} zvolen pro svou spolehlivost, nativní podporu prostorových a~časových datových typů a~efektivní dávkové vkládání záznamů.
+    \item \textbf{FastAPI, Pandas a~NumPy:} Aplikační jádro backendové vrstvy tvoří moderní webový framework FastAPI~\cite{fastapi_docs}, který zpřístupňuje uložená data prostřednictvím asynchronních \acs{HTTP} \acs{REST} endpointů (metody \texttt{GET} pro čtení statistik a~\texttt{POST} pro řízení služeb). Na něj v~paměti navazují knihovny NumPy~\cite{harris_numpy_2020} a~Pandas~\cite{mckinney_pandas_2010}, jež zajišťují rychlé vektorové výpočty, filtraci a~časové převzorkování (\textit{resampling}) dopravních časových řad.
+    \item \textbf{Streamlit a~Plotly:} Prezentační vrstva je realizována pomocí frameworku Streamlit~\cite{streamlit_docs}, který umožňuje vytvářet reaktivní webové dashboardy přímo v~jazyce Python bez nutnosti psaní samostatného frontendového kódu v~JavaScriptu. Pro samotné vykreslování grafů využívá knihovnu Plotly~\cite{plotly_docs_2015}, jež poskytuje interaktivní skládané sloupcové grafy a~histogramy intenzity dopravy v~reálném čase.
+    \item \textbf{Docker:} Kontejnerová platforma Docker~\cite{docker_docs} zastřešuje celé řešení a~zaručuje plnou reprodukovatelnost a~izolaci běhového prostředí napříč zařízeními.
 \end{itemize}
 
 \section{Výběr hardwaru}
@@ -64,7 +69,7 @@ Pro zajištění spolehlivého chodu celého řešení je hardwarová část fyz
 
 \textbf{Zpracovatelská jednotka:} Jako výpočetní platforma na hraně sítě (edge zařízení), která přijímá datový tok z~lokální sítě, je navrženo zařízení Raspberry Pi 5. Tato platforma představuje vhodný kompromis mezi výkonem, spotřebou a pořizovací cenou~\cite{raspberrypi_docs_2024}. Pro zajištění real-time inference neuronové sítě je doplněna o~dedikovaný AI akcelerátor Hailo-8 kompatibilní s~touto platformou~\cite{raspberrypi_ai_kit}. Tento přístup umožňuje efektivní zpracování obrazu přímo na místě bez nutnosti využití cloudových služeb.
 
-\textbf{Referenční výpočetní stanice (\acs{GPU}):} Pro účely kompilace modelů (která je paměťově i~výpočetně náročná) a~pro realizaci referenčního srovnávacího měření s~nekvantizovaným modelem \acs{YOLO} v~plné přesnosti (FP32/FP16) byl zvolen přenosný počítač Acer Nitro~V~15 (ANV15-51) vybavený dedikovanou grafickou kartou \textbf{NVIDIA GeForce RTX~2050} (architektura Ampere, 2\,048~CUDA jader, 4~GB paměti GDDR6). Tato platforma slouží v~experimentální části práce jako referenční srovnávací základna vůči nízkoenergetickému okrajovému uzlu s~akcelerátorem Hailo-8.
+\textbf{Referenční výpočetní stanice (\acs{GPU}):} Pro účely kompilace modelů (která je paměťově i~výpočetně náročná) a~pro realizaci referenčního srovnávacího měření s~nekvantizovaným modelem YOLO v~plné přesnosti (FP32/FP16) byl zvolen přenosný počítač Acer Nitro~V~15 (ANV15-51) vybavený dedikovanou grafickou kartou \textbf{NVIDIA GeForce RTX~2050} (architektura Ampere, 2\,048~CUDA jader, 4~GB paměti GDDR6). Tato platforma slouží v~experimentální části práce jako referenční srovnávací základna vůči nízkoenergetickému okrajovému uzlu s~akcelerátorem Hailo-8.
 
 
 \section{Celková architektura a tok dat}
@@ -85,10 +90,10 @@ Architektura systému je navržena jako vícevrstvá, distribuovaná a modulárn
 Na obrázku~\ref{fig:architecture} je znázorněna celková topologie navrženého řešení. Systém je rozdělen do pěti funkčních vrstev, kterými postupně prochází tok dat:
 
 \begin{enumerate}
-    \item \textbf{Vrstva akvizice obrazu (Síťové rozhraní):} Koncová \acs{IP} kamera poskytuje kontinuální video stream přenášený po lokální síti pomocí protokolu \acs{RTSP} (\textit{RTSP stream}).
-    \item \textbf{Vrstva zpracování videa (Edge vrstva):} Obrazová data jsou přijata na okrajovém zařízení Raspberry Pi~5 v~řetězci GStreamer, předzpracována a~předána detekčnímu modelu \acs{YOLO}~\cite{redmon_yolo_2016} na akcelerátoru Hailo-8. Následný sledovací algoritmus (na principu \acs{SORT}~\cite{SORT_original_2016}) přiřazuje objektům unikátní identifikátory a~vyhodnocuje jejich průchod definovanou polygonální oblastí zájmu (\acs{ROI})~\cite{mdpi_roi_tracking_2022}. Pro testovací a~ladicí účely dokáže tento modul zpracovaný obraz s~vykreslenými detekcemi souběžně vysílat jako výstupní \acs{RTSP} stream nebo ukládat do souboru MP4.
-    \item \textbf{Komunikační vrstva (\acs{MQTT} Server):} Vygenerované strukturované události o~průjezdech vozidel jsou serializovány do formátu \acs{JSON} a~asynchronně odesílány (\textit{sending JSON}) do centrálního \acs{MQTT} brokeru~\cite{mqtt_oasis_2019}.
-    \item \textbf{Datová a~backendová vrstva (Backend):} Datový modul (\acs{MQTT} subscriber) udržuje obousměrné spojení s~brokerem (\textit{listen / publish} pro odebírání zpráv a~řízení odběru) a~přijaté události dávkově zapisuje (\textit{writing batch}) do normalizovaného schématu relační databáze PostgreSQL. Součástí backendu je aplikační server FastAPI, který s~databází komunikuje obousměrně (\textit{query / reading}) – odesílá analytické \acs{SQL} dotazy a~přijímá výsledné datové sady.
+    \item \textbf{Vrstva akvizice obrazu (Síťové rozhraní):} Koncová \acs{IP} kamera poskytuje kontinuální video stream přenášený po lokální síti pomocí protokolu RTSP (\textit{RTSP stream}).
+    \item \textbf{Vrstva zpracování videa (Edge vrstva):} Obrazová data jsou přijata na okrajovém zařízení Raspberry Pi~5 v~řetězci GStreamer, předzpracována a~předána detekčnímu modelu YOLO~\cite{redmon_yolo_2016} na akcelerátoru Hailo-8. Následný sledovací algoritmus (na principu \acs{SORT}~\cite{SORT_original_2016}) přiřazuje objektům unikátní identifikátory a~vyhodnocuje jejich průchod definovanou polygonální oblastí zájmu ROI~\cite{mdpi_roi_tracking_2022}. Pro testovací a~ladicí účely dokáže tento modul zpracovaný obraz s~vykreslenými detekcemi souběžně vysílat jako výstupní RTSP stream nebo ukládat do souboru MP4.
+    \item \textbf{Komunikační vrstva (MQTT Server):} Vygenerované strukturované události o~průjezdech vozidel jsou serializovány do formátu \acs{JSON} a~asynchronně odesílány (\textit{sending JSON}) do centrálního MQTT brokeru~\cite{mqtt_oasis_2019}.
+    \item \textbf{Datová a~backendová vrstva (Backend):} Datový modul (MQTT subscriber) udržuje obousměrné spojení s~brokerem (\textit{listen / publish} pro odebírání zpráv a~řízení odběru) a~přijaté události dávkově zapisuje (\textit{writing batch}) do normalizovaného schématu relační databáze PostgreSQL. Součástí backendu je aplikační server FastAPI, který s~databází komunikuje obousměrně (\textit{query / reading}) – odesílá analytické \acs{SQL} dotazy a~přijímá výsledné datové sady.
     \item \textbf{Aplikační a~vizualizační vrstva (Frontend):} Webový dashboard ve frameworku Streamlit komunikuje s~FastAPI serverem obousměrně přes protokol \acs{HTTP} (\textit{POST / GET}) – pomocí požadavků \texttt{GET} načítá agregované dopravní statistiky a~pomocí požadavků \texttt{POST} umožňuje vzdáleně spouštět či zastavovat detekční pipeline a~databázové služby.
 \end{enumerate}
 
@@ -117,18 +122,18 @@ Struktura softwarové aplikace je rozdělena do následujících vrstev a~klíč
         \item \texttt{HailoTrackerPipeline} – Ústřední řídicí třída detekčního modulu. Zapouzdřuje sestavení multimediálního řetězce (\texttt{Gst.Pipeline}), hlavní smyčku (\texttt{GLib.MainLoop}), komunikaci s~externími prvky \texttt{GStreamerHailo} (\texttt{hailonet}, \texttt{hailofilter}, \\ \texttt{hailotracker}) a~registraci zpětného volání (\texttt{buffer\_probe\_callback}). Současně udržuje geometrickou definici oblasti zájmu (\texttt{zone\_polygon}) a~množinu již odeslaných identifikátorů (\texttt{sent\_track\_ids}).
         \item \texttt{DetectionData} – Vláknově bezpečná (\textit{thread-safe}) datová struktura využívající synchronizační zámek (\texttt{Lock}) pro uchovávání aktuálních detekcí, počtu snímků a~generování překryvného textu (\texttt{get\_count\_overlay\_text}).
         \item \texttt{VideoStatistics} a~\texttt{RTSPServer} – Volitelné kompozičně vázané třídy (s~násobností \texttt{0..1}). \texttt{VideoStatistics} agreguje souhrnné metriky při offline analýze záznamů, zatímco \texttt{RTSPServer} umožňuje prostřednictvím prvku \texttt{appsrc} streamovat obraz s~vykreslenými detekcemi po síti.
-        \item \texttt{MQTTPublisher} – Univerzální komunikační třída zapouzdřující klienta protokolu \acs{MQTT}. Na straně edge pipeline publikuje serializované slovníky detekcí do externího uzlu \texttt{MQTTBroker} (téma \texttt{videoanalyza}), zatímco na straně serveru funguje jako odběratel předávající zprávy metodě \texttt{on\_message}.
+        \item \texttt{MQTTPublisher} – Univerzální komunikační třída zapouzdřující klienta protokolu MQTT. Na straně edge pipeline publikuje serializované slovníky detekcí do externího uzlu \texttt{MQTTBroker} (téma \texttt{videoanalyza}), zatímco na straně serveru funguje jako odběratel předávající zprávy metodě \texttt{on\_message}.
     \end{itemize}
     
     \item \textbf{Backendová vrstva (\texttt{Backend}):} Zajišťuje trvalé ukládání dat, správu databázových spojení a~aplikační rozhraní:
     \begin{itemize}
-        \item \texttt{PostgreDatabaseManager} – Třída zodpovědná za perzistenci a~čtení dat z~externího databázového systému \texttt{PostgreSQL}. Využívá vláknový fond spojení \\ (\texttt{ThreadedConnectionPool}), parsuje příchozí \acs{MQTT} zprávy, provádí dávkové vkládání záznamů (\texttt{insert\_batch\_detections}) a~poskytuje agregační metody pro analytické a~stavové dotazy.
-        \item \texttt{FastAPIApp} – Aplikační modul poskytující \acs{REST} \acs{API} endpointy pro čtení statistik z~databáze (\texttt{get\_detections}, \texttt{get\_statistics}) a~zároveň umožňující vzdáleně spouštět a~zastavovat detekční pipeline v~samostatném vlákně (\texttt{Thread}).
+        \item \texttt{PostgreDatabaseManager} – Třída zodpovědná za perzistenci a~čtení dat z~externího databázového systému \texttt{PostgreSQL}. Využívá vláknový fond spojení \\ (\texttt{ThreadedConnectionPool}), parsuje příchozí MQTT zprávy, provádí dávkové vkládání záznamů (\texttt{insert\_batch\_detections}) a~poskytuje agregační metody pro analytické a~stavové dotazy.
+        \item \texttt{FastAPIApp} – Aplikační modul poskytující REST API endpointy pro čtení statistik z~databáze (\texttt{get\_detections}, \texttt{get\_statistics}) a~zároveň umožňující vzdáleně spouštět a~zastavovat detekční pipeline v~samostatném vlákně (\texttt{Thread}).
     \end{itemize}
 
     \item \textbf{Prezentační vrstva (\texttt{Frontend}):}
     \begin{itemize}
-        \item \texttt{StreamlitDashboard} – Prezentační modul komunikující s~modulem \texttt{FastAPIApp} přes protokol \acs{HTTP} \acs{REST}. Zajišťuje načítání dat (\texttt{fetch\_detections}, \\ \texttt{fetch\_statistics}), interaktivní vykreslování grafů a~ovládání chodu systému koncovým uživatelem.
+        \item \texttt{StreamlitDashboard} – Prezentační modul komunikující s~modulem \texttt{FastAPIApp} přes protokol HTTP REST. Zajišťuje načítání dat (\texttt{fetch\_detections}, \\ \texttt{fetch\_statistics}), interaktivní vykreslování grafů a~ovládání chodu systému koncovým uživatelem.
     \end{itemize}
 \end{enumerate}
 
@@ -145,17 +150,17 @@ Aby okrajové zařízení zvládalo zpracovávat obrazový tok v~reálném čase
 
 \begin{enumerate}
     \item \textbf{Zřetězené zpracování obrazu (GStreamer pipeline):} Dekódování síťového \acs{RTSP} streamu, změna rozlišení na $640 \times 640$~pixelů, samotná inference na čipu Hailo-8 (ze zkompilovaného binárního souboru \acs{HEF}) a přiřazování sledovacích identifikátorů jsou navrženy jako souvislý datovod v~nativním C/C++ frameworku GStreamer. Řídicí vrstva v~jazyce Python do obrazových matic přímo nezasahuje, ale pouze odebírá vygenerovaná textová metadata o~detekcích prostřednictvím asynchronního zpětného volání (\textit{buffer probe}).
-    \item \textbf{Asynchronní přenos metadat (\acs{MQTT} návrh):} Přímý synchronní zápis do vzdálené databáze z~vlákna zpracovávajícího video by v~případě síťové odezvy blokoval výpočetní pipeline. Proto je přenos dat navržen na bázi modelu \textit{Publish/Subscribe} pomocí protokolu \acs{MQTT}~\cite{mqtt_oasis_2019}. Jakmile vozidlo projede polygonální zónou \acs{ROI}, detekční modul sestaví lehkou datovou zprávu ve formátu \acs{JSON} (obsahující identifikátor a název třídy, míru spolehlivosti \textit{confidence}, souřadnice rámečku \texttt{bbox}, sledovací \texttt{track\_id} a časové razítko \texttt{timestamp}) a neblokujícím způsobem ji publikuje na \acs{MQTT} broker do tématu \texttt{/videoanalyza}.
-    \item \textbf{Dávková perzistence a obsluha dotazů (\acs{REST} \acs{API}):} Na straně serveru odebírá zprávy z~\acs{MQTT} brokeru nezávislá služba (subscriber). Pro minimalizaci režie databázových transakcí při hustém provozu je navrženo využití fondu spojení (\textit{connection pooling}) a dávkového vkládání záznamů (\textit{batch insert}). Nad databází stojí backendový server ve frameworku FastAPI, který prostřednictvím \acs{REST} \acs{API} endpointů poskytuje předagregovaná statistická data prezentační vrstvě (Streamlit dashboardu) a současně umožňuje vzdálené řízení stavu detekční pipeline.
+    \item \textbf{Asynchronní přenos metadat (MQTT návrh):} Přímý synchronní zápis do vzdálené databáze z~vlákna zpracovávajícího video by v~případě síťové odezvy blokoval výpočetní pipeline. Proto je přenos dat navržen na bázi modelu \textit{Publish/Subscribe} pomocí protokolu \acs{MQTT}~\cite{mqtt_oasis_2019}. Jakmile vozidlo projede polygonální zónou ROI, detekční modul sestaví lehkou datovou zprávu ve formátu \acs{JSON} (obsahující identifikátor a název třídy, míru spolehlivosti \textit{confidence}, souřadnice rámečku \texttt{bbox}, sledovací \texttt{track\_id} a časové razítko \texttt{timestamp}) a neblokujícím způsobem ji publikuje na MQTT broker do tématu \texttt{/videoanalyza}.
+    \item \textbf{Dávková perzistence a obsluha dotazů (\acs{REST} \acs{API}):} Na straně serveru odebírá zprávy z~MQTT brokeru nezávislá služba (subscriber). Pro minimalizaci režie databázových transakcí při hustém provozu je navrženo využití fondu spojení (\textit{connection pooling}) a dávkového vkládání záznamů (\textit{batch insert}). Nad databází stojí backendový server ve frameworku FastAPI, který prostřednictvím REST API endpointů poskytuje předagregovaná statistická data prezentační vrstvě (Streamlit dashboardu) a současně umožňuje vzdálené řízení stavu detekční pipeline.
 \end{enumerate}
 
-\subsection{Návrh databázového úložiště a prezenční vrstvy}
-Strukturované detekční události přijaté z~\acs{MQTT} brokeru jsou trvale ukládány do relačního databázového systému PostgreSQL~\cite{psycopg_docs_2025}. Pro zajištění datové integrity, eliminaci redundance (splnění třetí normální formy – 3NF) a~efektivní provádění analytických dotazů byl navržen normalizovaný relační datový model. Namísto ukládání opakujících se textových řetězců do jediné ploché tabulky je schéma dekomponováno do sedmi entit propojených cizími klíči, jak znázorňuje entitně-relační (\acs{ER}) diagram na obrázku~\ref{fig:erd}.
+\subsection{Návrh databázového úložiště a prezentační vrstvy}
+Strukturované detekční události přijaté z~MQTT brokeru jsou trvale ukládány do relačního databázového systému PostgreSQL~\cite{psycopg_docs_2025}. Pro zajištění datové integrity, eliminaci redundance (splnění třetí normální formy – 3NF) a~efektivní provádění analytických dotazů byl navržen normalizovaný relační datový model. Namísto ukládání opakujících se textových řetězců do jediné ploché tabulky je schéma dekomponováno do sedmi entit propojených cizími klíči, jak znázorňuje entitně-relační (\acs{ER}) diagram na obrázku~\ref{fig:erd}.
 
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.95\textwidth]{images/erd_diagram.png}
-    \caption{Entitně-relační (\acs{ER}) diagram normalizovaného databázového schématu.}
+    \caption{Entitně-relační (ER) diagram normalizovaného databázového schématu.}
     \label{fig:erd}
 \end{figure}
 
@@ -169,7 +174,7 @@ Navržené schéma se skládá z~centrální tabulky detekčních událostí a~�
     \item \textbf{\texttt{edge\_device} (Číselník výpočetních uzlů):} Eviduje koncová zařízení pod klíčem \\\texttt{id\_edge\_device} (\texttt{INT}), název nasazeného detekčního modelu v~atributu \texttt{model\_name} (\texttt{TEXT}, např. \texttt{yolov8m}) a~identifikátor výpočetní jednotky \texttt{device\_name} (\texttt{TEXT}). Tato tabulka zajišťuje plnou připravenost systému na horizontální škálování do více dopravních lokalit a~porovnávání různých verzí modelů.
 \end{itemize}
 
-\textbf{Indexování:} S~ohledem na charakter analytických dotazů jsou nad cizími klíči a~časovými atributy \texttt{time} (v~tabulce \texttt{detection}) a~\texttt{first\_time} (v~tabulce \texttt{track}) definovány B-tree indexy. Použití sestupného indexu nad časovým razítkem optimalizuje dotazy na nejnovější průjezdy a~agregaci v~časových oknech pro vizualizační dashboard
+\textbf{Indexování:} S~ohledem na charakter analytických dotazů jsou nad cizími klíči a~časovými atributy \texttt{time} (v~tabulce \texttt{detection}) a~\texttt{first\_time} (v~tabulce \texttt{track}) definovány B-tree indexy. Použití sestupného indexu nad časovým razítkem optimalizuje dotazy na nejnovější průjezdy a~agregaci v~časových oknech pro vizualizační dashboard.
 
 \subsection{Návrh analytického rozhraní a vizualizace dat}
-Pro zpřístupnění uložených dopravních dat koncovému uživateli je nad databázovou vrstvou navrženo asynchronní \acs{REST} \acs{API} postavené na frameworku FastAPI~\cite{fastapi_docs}, které odděluje datovou logiku od samotné prezentace. Numerické transformace, výpočet klíčových ukazatelů (celkový počet průjezdů, průměrná spolehlivost detekce, vytížení databáze) a~časové agregace záznamů do volitelných intervalů zajišťují knihovny NumPy~\cite{harris_numpy_2020} a~Pandas~\cite{mckinney_pandas_2010}. Koncové webové rozhraní je navrženo ve frameworku Streamlit~\cite{streamlit_docs} v~kombinaci s~grafickou knihovnou Plotly~\cite{plotly_docs_2015} tak, aby poskytovalo jak přehledový analytický pohled (skládané sloupcové grafy časových řad, rozpad podle tříd vozidel a~souhrnné metriky za zvolené období), tak ovládací panel (\textit{System Control}) pro vzdálené spouštění a~zastavování detekční pipeline a~sledování stavu databázového připojení.
+Pro zpřístupnění uložených dopravních dat koncovému uživateli je nad databázovou vrstvou navrženo asynchronní REST API postavené na frameworku FastAPI~\cite{fastapi_docs}, které odděluje datovou logiku od samotné prezentace. Numerické transformace, výpočet klíčových ukazatelů (celkový počet průjezdů, průměrná spolehlivost detekce, vytížení databáze) a~časové agregace záznamů do volitelných intervalů zajišťují knihovny NumPy~\cite{harris_numpy_2020} a~Pandas~\cite{mckinney_pandas_2010}. Koncové webové rozhraní je navrženo ve frameworku Streamlit~\cite{streamlit_docs} v~kombinaci s~grafickou knihovnou Plotly~\cite{plotly_docs_2015} tak, aby poskytovalo jak přehledový analytický pohled (skládané sloupcové grafy časových řad, rozpad podle tříd vozidel a~souhrnné metriky za zvolené období), tak ovládací panel (\textit{System Control}) pro vzdálené spouštění a~zastavování detekční pipeline a~sledování stavu databázového připojení.

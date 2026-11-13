@@ -2,4 +2,5 @@ videos/sample_video.mp4 filter=lfs diff=lfs merge=lfs -text
 thesis_text/thesis_literature_resources/*.pdf filter=lfs diff=lfs merge=lfs -text
 thesis_text/*.pdf filter=lfs diff=lfs merge=lfs -text
 thesis_text/** linguist-documentation
-*.ipynb linguist-documentation
+rpi_src/model_compile/*.ipynb linguist-documentation
+docs/documentation.tex linguist-documentation
