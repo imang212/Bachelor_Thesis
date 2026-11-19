@@ -28,12 +28,12 @@ The system is divided into an Edge processing unit (AI Module), an asynchronous 
 
 ### Detection pipeline (RTSP Input)
 
-<img width="75%" alt="own_tracking" src="/home/patrik/Bachelor_thesis/thesis_text/images/own_objects_tracking.png"/>
+<img width="75%" alt="own_tracking" src="thesis_text/images/own_objects_tracking.png"/>
 
 
 ### Analytics Dashboard
 
-<img width="100%" alt="Dashboard" src="/home/patrik/Bachelor_thesis/thesis_text/images/visualisation_dashboard.png" />
+<img width="100%" alt="Dashboard" src="thesis_text/images/visualisation_dashboard.png" />
 
 ### Repository Structure
 - `.github/workflows/` – Automated CI/CD pipeline (`ci.yml`) running unit tests and validating Docker Compose configurations.
