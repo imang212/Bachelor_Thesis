@@ -24,13 +24,15 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ../db/init_hailo.sql:/docker-entrypoint-initdb.d/init_hailo.sql:ro
+      - ../db/hailo_data_sample_2026-01-28_to_2026-07-03.sql.gz:/docker-entrypoint-initdb.d/02_hailo_data.sql.gz:ro
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s
       timeout: 5s
-      retries: 10
+      retries: 20
+      start_period: 120s
   # RTSP server: the simulated camera publishes to it, the pipeline reads from it
   rtsp_server:
     image: bluenviron/mediamtx:1.9.3   # pin a verified version, avoid :latest
