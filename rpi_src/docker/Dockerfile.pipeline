@@ -1,5 +1,5 @@
 # Simulace linux/arm64 prostředí pro Raspberry Pi 5 s Hailo-8
-FROM python:3.11.10-slim-bookworm@sha256:c1fd49c15e2a1db5afb6b9a6f4421b606760c3638698531b53e7b6a12870fe8
+FROM python:3.11.10-slim-bookworm@sha256:840e180ebcc6e5c8efab209c43f5e40fd2af98cb49db5c7103c90539c56bb30e
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PYTHONUNBUFFERED=1

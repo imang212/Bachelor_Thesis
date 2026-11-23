@@ -1,3 +1,4 @@
+from contextlib import contextmanager
 from typing import List, Dict, Any, Optional, Callable
 import psycopg2
 from psycopg2.pool import ThreadedConnectionPool
@@ -69,7 +70,7 @@ class PostgreDatabaseManager:
         try:
             pool = ThreadedConnectionPool(
                 minconn=self.db_config.get('min_connections', 1),
-                maxconn=self.db_config.get('max_connections', 10),
+                maxconn=self.db_config.get('max_connections', 20),
                 host=self.db_config.get('host', 'localhost'),
                 port=self.db_config.get('port', 5432),
                 database=self.db_config.get('database', 'hailo_db'),
@@ -80,7 +81,7 @@ class PostgreDatabaseManager:
         except Exception as e:
             print(f"[DatabaseManager] Failed to create pool: {e}")
             raise
-    
+
     def verify_pool(self) -> bool:
         """Verify connection pool is working."""
         try:
@@ -223,7 +224,149 @@ class PostgreDatabaseManager:
         finally:
             cursor.close()
             self.return_connection(conn)
-    
+
+    BUCKET_SQL_MAP = {
+        "1min": "date_bin('1 minute', timestamp_, TIMESTAMPTZ '2020-01-01')",
+        "10min": "date_bin('10 minutes', timestamp_, TIMESTAMPTZ '2020-01-01')",
+        "30min": "date_bin('30 minutes', timestamp_, TIMESTAMPTZ '2020-01-01')",
+        "1h": "date_trunc('hour', timestamp_)",
+        "6h": "date_bin('6 hours', timestamp_, TIMESTAMPTZ '2020-01-01')",
+        "1D": "date_trunc('day', timestamp_)",
+        "1W": "date_trunc('week', timestamp_)",
+        "1ME": "date_trunc('month', timestamp_)",
+        "3ME": "date_trunc('quarter', timestamp_)",
+        "1YE": "date_trunc('year', timestamp_)",
+    }
+    def get_timeline_aggregated(self, interval: str = "10min", start_time: Optional[datetime] = None, end_time: Optional[datetime] = None,
+        device_type: Optional[str] = None, model_name: Optional[str] = None,) -> List[Dict[str, Any]]:
+        """Aggregate detection counts per time bucket and class directly in PostgreSQL."""
+        bucket_expr = self.BUCKET_SQL_MAP.get(interval)
+        if not bucket_expr:
+            raise ValueError(f"Unsupported interval: {interval}")
+        conditions = []
+        params: List[Any] = []
+        if start_time is not None and end_time is not None:
+            conditions.append("timestamp_ >= %s AND timestamp_ <= %s")
+            params.extend([start_time, end_time])
+        if device_type:
+            conditions.append("device_type = %s")
+            params.append(device_type)
+        if model_name:
+            conditions.append("model_name = %s")
+            params.append(model_name)
+        where_clause = (" WHERE " + " AND ".join(conditions)) if conditions else ""
+        query = f"""
+            SELECT {bucket_expr} AS bucket, class_name, COUNT(*) AS count
+            FROM detections {where_clause}
+            GROUP BY bucket, class_name
+            ORDER BY bucket ASC;
+        """
+        with self.get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(query, tuple(params))
+                return [{
+                        "timestamp": row[0].isoformat(),
+                        "class_name": row[1],
+                        "count": row[2],
+                    } for row in cur.fetchall()]
+
+    def get_filter_metadata(self) -> Dict[str, Optional[str]]:
+        """Return earliest and latest detection timestamps in database."""
+        with self.get_connection() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute("SELECT MIN(timestamp_), MAX(timestamp_) FROM detections;")
+                bounds = cursor.fetchone()
+                cursor.execute("SELECT DISTINCT device_type FROM detections WHERE device_type IS NOT NULL ORDER BY device_type;")
+                devices = [row[0] for row in cursor.fetchall()]
+                cursor.execute("SELECT DISTINCT model_name FROM detections WHERE model_name IS NOT NULL ORDER BY model_name;")
+                models = [row[0] for row in cursor.fetchall()]
+            return {
+                "min_timestamp": bounds[0].isoformat() if bounds and bounds[0] else None,
+                "max_timestamp": bounds[1].isoformat() if bounds and bounds[1] else None,
+                "device_types": devices,
+                "model_names": models,
+            }
+
+    def get_detections_filtered(self, start_time: Optional[datetime] = None, end_time: Optional[datetime] = None, device_type: Optional[str] = None, 
+                                model_name: Optional[str] = None, minutes: int = 60, limit: int = 50000,) -> List[Dict[str, Any]]:
+        """Fetch detections filtered by time window, device_type, and model_name."""
+        conditions = []
+        params: List[Any] = []
+        if start_time is not None and end_time is not None:
+            conditions.append("timestamp_ >= %s AND timestamp_ <= %s")
+            params.extend([start_time, end_time])
+        else:
+            conditions.append("timestamp_ >= NOW() - (%s * INTERVAL '1 minute')")
+            params.append(minutes)
+        if device_type:
+            conditions.append("device_type = %s")
+            params.append(device_type)
+        if model_name:
+            conditions.append("model_name = %s")
+            params.append(model_name)
+        where_clause = " WHERE " + " AND ".join(conditions)
+        limit_clause = ""
+        if limit is not None and limit > 0:
+            limit_clause = "LIMIT %s"
+            params.append(limit)
+        query = f"""
+            SELECT id, timestamp_, frame_id, class_name, confidence, x1, y1, x2, y2, track_id, model_name, device_type
+            FROM detections
+            {where_clause}
+            ORDER BY timestamp_ DESC
+            {limit_clause};
+        """
+        columns = ["id", "timestamp_", "frame_id", "class_name", "confidence", "x1", "y1", "x2", "y2", "track_id", "model_name", "device_type"]
+        with self.get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(query, tuple(params))
+                return [dict(zip(columns, row)) for row in cur.fetchall()]
+
+    def get_statistics_filtered(self, start_time: Optional[datetime] = None, end_time: Optional[datetime] = None,
+        device_type: Optional[str] = None, model_name: Optional[str] = None, hours: int = 24,) -> Dict[str, Dict[str, Any]]:
+        """Aggregate class statistics over the exact selected date range, device_type, and model_name."""
+        conditions = []
+        params: List[Any] = []
+        if start_time is not None and end_time is not None:
+            conditions.append("timestamp_ >= %s AND timestamp_ <= %s")
+            params.extend([start_time, end_time])
+        else:
+            conditions.append("timestamp_ >= NOW() - (%s * INTERVAL '1 hour')")
+            params.append(hours)
+        if device_type:
+            conditions.append("device_type = %s")
+            params.append(device_type)
+        if model_name:
+            conditions.append("model_name = %s")
+            params.append(model_name)
+        where_clause = " WHERE " + " AND ".join(conditions)
+        query = f"""
+            SELECT
+                class_name,
+                COUNT(*) AS total_detections,
+                COUNT(DISTINCT track_id) AS unique_tracks,
+                AVG(confidence) AS avg_confidence,
+                MIN(confidence) AS min_confidence,
+                MAX(confidence) AS max_confidence
+            FROM detections
+            {where_clause}
+            GROUP BY class_name
+            ORDER BY total_detections DESC;
+        """
+        with self.get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(query, tuple(params))
+                result = {}
+                for row in cur.fetchall():
+                    result[row[0]] = {
+                        "total_detections": row[1],
+                        "unique_tracks": row[2],
+                        "avg_confidence": float(row[3]) if row[3] is not None else 0.0,
+                        "min_confidence": float(row[4]) if row[4] is not None else 0.0,
+                        "max_confidence": float(row[5]) if row[5] is not None else 0.0,
+                    }
+                return result
+        
     def get_recent_detections(self, minutes: int = 5, limit: int = 100) -> List[Dict[str, Any]]:
         """
         Retrieve recent detections.
@@ -250,6 +393,7 @@ class PostgreDatabaseManager:
             cursor.close()
             self.return_connection(conn)
 
+    
     def get_counts_detections(self, minutes: int = 5, per: str = "10 minutes") -> List[Dict[str, Any]]:
         """
         Get counts of detections within a time interval.

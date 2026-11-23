@@ -4,9 +4,9 @@ Can be run standalone via:
     streamlit run rpi_src/pipeline/streamlit_dashboard.py
 or launched automatically via API_with_streamlit.py.
 """
+from datetime import datetime, time as dt_time
 import os
 import time
-import asyncio
 import requests
 import numpy as np  
 import pandas as pd
@@ -34,51 +34,75 @@ def run_streamlit():
     API_BASE_URL = os.getenv("API_BASE_URL", "http://localhost:8000")
 
     @st.cache_data(ttl=60)
-    def fetch_detections(minutes=60, limit=10000000):
+    def fetch_filter_metadata():
         try:
-            response = requests.get(
-                f"{API_BASE_URL}/api/detections",
-                params={"minutes": minutes, "limit": limit},
-                timeout=300
-            )
+            response = requests.get(f"{API_BASE_URL}/api/filter_metadata", timeout=10)
+            return response.json() if response.status_code == 200 else {}
+        except Exception:
+            return {}
+
+    @st.cache_data(ttl=60)
+    def fetch_detections(start_time=None, end_time=None, device_type=None, model_name=None, limit=None):
+        try:
+            params = {"limit": 0 if limit is None else limit}
+            if start_time and end_time:
+                params["start_time"] = start_time.isoformat()
+                params["end_time"] = end_time.isoformat()
+            if device_type:
+                params["device_type"] = device_type
+            if model_name:
+                params["model_name"] = model_name
+            response = requests.get(f"{API_BASE_URL}/api/detections", params=params, timeout=300)
             if response.status_code == 200:
                 data = response.json()
-                #print(data[0:5])  # Print first 5 records for debugging
-                #print(f"Fetched {len(data)} detections")
                 if data:
                     df = pd.DataFrame(data)
-                    df['timestamp'] = pd.to_datetime(df['timestamp'])
-                    df[['x1', 'y1', 'x2', 'y2']] = pd.DataFrame(df['bbox'].tolist(), index=df.index) # into columns
+                    df["timestamp"] = pd.to_datetime(df["timestamp"])
+                    df[["x1", "y1", "x2", "y2"]] = pd.DataFrame(df["bbox"].tolist(), index=df.index)
                     return df
-                #print(df.head())
-                return pd.DataFrame()
-            else:
-                st.error(f"API Error: {response.status_code} - {response.text}")
-                return pd.DataFrame()
-        except requests.Timeout:
-            st.error(f"Request timed out fetching {minutes} minutes of data")
             return pd.DataFrame()
         except Exception as e:
             st.error(f"Error fetching detections: {str(e)}")
             return pd.DataFrame()
 
     @st.cache_data(ttl=60)
-    def fetch_statistics(hours=24):
+    def fetch_timeline(interval="10min", start_time=None, end_time=None, device_type=None, model_name=None):
         try:
-            response = requests.get(
-                f"{API_BASE_URL}/api/statistics",
-                params={"hours": hours},
-                timeout=300
-            )
-            data = response.json()
-            if data:
-                print(f"Fetched statistics: {data}")
-                return data
-            #print(f'{response.json()}')
+            params = {"interval": interval}
+            if start_time and end_time:
+                params["start_time"] = start_time.isoformat()
+                params["end_time"] = end_time.isoformat()
+            if device_type:
+                params["device_type"] = device_type
+            if model_name:
+                params["model_name"] = model_name
+            response = requests.get(f"{API_BASE_URL}/api/timeline", params=params, timeout=60)
+            if response.status_code == 200 and response.json():
+                df = pd.DataFrame(response.json())
+                df["timestamp"] = pd.to_datetime(df["timestamp"], utc=True).dt.tz_localize(None)
+                return df
+            return pd.DataFrame()
+        except Exception as e:
+            st.error(f"Error fetching timeline: {str(e)}")
+            return pd.DataFrame()
+    
+    @st.cache_data(ttl=60)
+    def fetch_statistics(start_time=None, end_time=None, device_type=None, model_name=None):
+        try:
+            params = {}
+            if start_time and end_time:
+                params["start_time"] = start_time.isoformat()
+                params["end_time"] = end_time.isoformat()
+            if device_type:
+                params["device_type"] = device_type
+            if model_name:
+                params["model_name"] = model_name
+            response = requests.get(f"{API_BASE_URL}/api/statistics", params=params, timeout=300)
+            return response.json() if response.status_code == 200 else {}
         except Exception:
             return {}
 
-    @st.cache_data(ttl=5)
+    @st.cache_data(ttl=30)
     def fetch_pipeline_status():
         try:
             response = requests.get(f"{API_BASE_URL}/pipeline/status", timeout=5)
@@ -147,18 +171,119 @@ def run_streamlit():
                     else:
                         st.error(f"Failed: {result}")
 
-        stats_format_func = lambda x: f"Last {x} hours" if x < 24 else f"Last {x//24} days"
-        time_format_func = lambda x: f"Last {x} minutes" if x < 60 else (f"Last {x//1440} days" if x > 1440 else f"Last {x//60} hours")
-        st.subheader("Detections Time Range")
-        time_range = st.selectbox(
-            "Select time range",
-            options=[60, 180, 360, 720, 1440, 2880, 5760, 10080, 20160, 40320, 80640, 161280, 322560, 604800],
-            format_func=time_format_func,
-            index=1
+        st.subheader("Data Filters")
+        meta = fetch_filter_metadata()
+        min_ts = pd.to_datetime(meta["min_timestamp"]).tz_localize(None) if meta.get("min_timestamp") else None
+        max_ts = pd.to_datetime(meta["max_timestamp"]).tz_localize(None) if meta.get("max_timestamp") else None
+        available_devices, available_models = meta.get("device_types", []), meta.get("model_names", [])
+        selected_start, selected_end = None, None
+        period_label = "selected period"
+
+        if min_ts and max_ts:
+            st.markdown(
+                f"""
+                <div style="
+                    background-color: rgba(28, 131, 225, 0.1);
+                    border-left: 3px solid #1c83e1;
+                    padding: 6px 10px;
+                    border-radius: 4px;
+                    font-size: 12px;
+                    line-height: 1.4;
+                    margin-bottom: 10px;
+                ">
+                    <strong>Dataset range:</strong><br>
+                    {min_ts.strftime('%d.%m.%Y %H:%M')} – {max_ts.strftime('%d.%m.%Y %H:%M')}
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+            use_full_range = st.checkbox("Select entire dataset range", value=False)
+            if use_full_range:
+                start_d, end_d = min_ts.date(), max_ts.date()
+                start_t, end_t = min_ts.time().replace(microsecond=0), max_ts.time().replace(microsecond=0)
+            else:
+                default_start = max(min_ts.date(), (max_ts - pd.Timedelta(days=7)).date())
+                date_range = st.date_input(
+                    "Date range",
+                    value=(default_start, max_ts.date()),
+                    min_value=min_ts.date(),
+                    max_value=max_ts.date(),
+                )
+                if isinstance(date_range, tuple) and len(date_range) == 2:
+                    start_d, end_d = date_range
+                else:
+                    start_d = end_d = date_range[0] if isinstance(date_range, tuple) else date_range
+                col_t1, col_t2 = st.columns(2)
+                with col_t1:
+                    start_t = st.time_input("From time", value=dt_time(0, 0))
+                with col_t2:
+                    end_t = st.time_input("To time", value=dt_time(23, 59, 59))
+
+            selected_start = datetime.combine(start_d, start_t)
+            selected_end = datetime.combine(end_d, end_t)
+            period_label = f"{selected_start.strftime('%d.%m.%Y %H:%M')} – {selected_end.strftime('%d.%m.%Y %H:%M')}"
+        else:
+            st.warning("No timestamp range found in database.")
+
+        # Device type selector (auto-select if only 1 exists in DB)
+        selected_device = None
+        if len(available_devices) == 1:
+            selected_device = available_devices[0]
+            st.selectbox("Device type", options=available_devices, index=0, disabled=True)
+        elif len(available_devices) > 1:
+            choice = st.selectbox("Device type", options=["All"] + available_devices, index=0)
+            selected_device = None if choice == "All" else choice
+
+        # Model name selector (auto-select if only 1 exists in DB)
+        selected_model = None
+        if len(available_models) == 1:
+            selected_model = available_models[0]
+            st.selectbox("Model name", options=available_models, index=0, disabled=True)
+        elif len(available_models) > 1:
+            choice = st.selectbox("Model name", options=["All"] + available_models, index=0)
+            selected_model = None if choice == "All" else choice
+
+        max_points = st.select_slider(
+            "Max chart records",
+            options=[5000, 10000, 25000, 50000, 100000, 250000],
+            value=50000,
         )
-        INTERVAL_MAP = {"1 minute": "1T", "10 minutes": "10T", "30 minutes": "30T", "1 hour": "1H", "1 day": "1D", "1 month": "M1"}
-        DTICK_MAP = {"1T": 1 * 60 * 1000, "10T": 10 * 60 * 1000, "30T": 30 * 60 * 1000, "1H": 60 * 60 * 1000, "6H": 6 * 60 * 60 * 1000, "1D": 24 * 60 * 60 * 1000, "1W": 7 * 24 * 60 * 60 * 1000, "1M": "M1", "3M": "M3", "1Y": "M12"}
-        FORMAT_MAP = {"1T": "%H:%M", "10T": "%H:%M", "30T": "%H:%M", "1H": "%H:%M", "6H": "%H:%M", "1D": "%d.%m", "1W": "%d.%m", "M1": "%b %Y", "M3": "%b %Y", "M12": "%Y"}
+        INTERVAL_MAP = {
+            "1 minute": "1min",
+            "10 minutes": "10min",
+            "30 minutes": "30min",
+            "1 hour": "1h",
+            "6 hours": "6h",
+            "1 day": "1D",
+            "1 week": "1W",
+            "1 month": "1ME",
+            "3 months": "3ME",
+            "1 year": "1YE",
+        }
+        DTICK_MAP = {
+            "1min": 1 * 60 * 1000,
+            "10min": 10 * 60 * 1000,
+            "30min": 30 * 60 * 1000,
+            "1h": 60 * 60 * 1000,
+            "6h": 6 * 60 * 60 * 1000,
+            "1D": 24 * 60 * 60 * 1000,
+            "1W": 7 * 24 * 60 * 60 * 1000,
+            "1ME": "M1",
+            "3ME": "M3",
+            "1YE": "M12",
+        }
+        FORMAT_MAP = {
+            "1min": "%H:%M",
+            "10min": "%H:%M",
+            "30min": "%H:%M",
+            "1h": "%H:%M",
+            "6h": "%d.%m %H:%M",
+            "1D": "%d.%m",
+            "1W": "%d.%m",
+            "1ME": "%b %Y",
+            "3ME": "%b %Y",
+            "1YE": "%Y",
+        }
         st.markdown("---")
         auto_refresh = st.checkbox("Enable auto-refresh", value=True)
         refresh_interval = st.slider("Refresh interval (seconds)", 5, 60, 60)
@@ -168,17 +293,17 @@ def run_streamlit():
 
     ## DASHBOARD
     if db_status and db_status.get('status') == "healthy":
-        df_detections = fetch_detections(minutes=time_range, limit=10000000)
+        df_detections = fetch_detections(
+            start_time=selected_start,
+            end_time=selected_end,
+            device_type=selected_device,
+            model_name=selected_model,
+            limit=max_points,
+        )
         col1 = st.columns(1)[0]
         with col1:
-            st.subheader("Statistics Summary")
-            stats_hours = st.selectbox(
-                "**Statistics time range:**",
-                options=[1, 6, 12, 24, 48, 168, 336, 720, 1440, 2880, 5760, 10080, 20160, 40320],
-                format_func=stats_format_func,
-                index=3
-            )
-            stats = fetch_statistics(hours=stats_hours)
+            st.subheader(f"Statistics Summary")
+            stats = fetch_statistics(start_time=selected_start, end_time=selected_end, device_type=selected_device, model_name=selected_model,)
             if stats:
                 stats_data = []
                 for class_name, data in stats.items():
@@ -197,10 +322,11 @@ def run_streamlit():
         if isinstance(df_detections, list) or df_detections.empty:
             st.warning("No detection data available for the selected time range.")
         else:
-            st.subheader(f"Detection Analytics Dashboard {time_format_func(time_range).lower()}.")
+            st.subheader(f"Detection Analytics Dashboard")
             col1, col2 = st.columns(2)
             with col1:
-                st.metric("Total Detections", f"{len(df_detections):,}")
+                total_in_period = sum(d['total_detections'] for d in stats.values()) if stats else len(df_detections)
+                st.metric("Total Detections (period)", f"{total_in_period:,}")
             with col2:
                 st.metric("Avg Confidence", f"{df_detections['confidence'].mean():.2%}")
 
@@ -210,15 +336,13 @@ def run_streamlit():
                 st.subheader("Histogram of Detected Classes")
                 per = st.pills(
                     "**Time aggregation:**",
-                    options=["1 minute", "10 minutes", "30 minutes", "1 hour", "1 day", "1 month"],
+                    options=list(INTERVAL_MAP.keys()),
                     selection_mode="single",
                     default="10 minutes",
-                    key="time_aggregation_pills"
+                    key="time_aggregation_pills",
                 )
                 per = per if per is not None else "10 minutes"
                 selected = INTERVAL_MAP[per]
-                available_classes = sorted(df_detections['class_name'].unique().tolist())
-                selected_classes = None
                 st.html("""
                 <style>
                     [data-testid="stButtonGroup"] {
@@ -247,34 +371,29 @@ def run_streamlit():
                     [data-testid="stBaseButton-pills"]:hover { background-color: #4a4a4a !important; }
                 </style>
                 """)
-                active_classes = tuple(sorted(selected_classes if selected_classes else available_classes))
-
-                def compute_timeline(df_det: pd.DataFrame, sel, act_classes):
-                    df_timeline = df_det[df_det['class_name'].isin(act_classes)].copy()
-                    df_timeline['timestamp'] = pd.to_datetime(df_timeline['timestamp'], utc=True).dt.tz_localize(None)
-                    df_timeline = df_timeline.set_index("timestamp")
-                    df_grouped = (df_timeline.groupby('class_name').resample(sel)["class_name"].size().reset_index(name="count"))
-                    df_pivot = df_grouped.pivot_table(index='timestamp', columns='class_name', values='count', fill_value=0).reset_index()
-                    df_long = df_pivot.melt(id_vars='timestamp', var_name='class_name', value_name='count')
-                    unique_times = sorted(df_long['timestamp'].unique())
-                    if len(df_long) > 0 and len(unique_times) > 2:
-                        df_long = df_long[(df_long['timestamp'] > unique_times[0]) & (df_long['timestamp'] < unique_times[-1])]
-                    return df_long
-
-                df_class_timeline = compute_timeline(df_detections, selected, active_classes)
-                class_order = (df_class_timeline.groupby('class_name')['count'].sum().sort_values(ascending=True).index.tolist())
-                df_class_timeline['class_name'] = pd.Categorical(df_class_timeline['class_name'], categories=class_order, ordered=True)
-                unique_times = sorted(df_class_timeline['timestamp'].unique())
-                columns_count = max(len(unique_times), 1)
-                if columns_count >= 5:
-                    fig_timeline = go.Figure()
-                    if len(active_classes) == 1:
-                        fig_timeline.add_trace(go.Bar(
-                            x=df_class_timeline['timestamp'],
-                            y=df_class_timeline['count'],
-                            name=active_classes[0],
-                        ))
-                    else:
+                df_class_timeline = df_class_timeline = fetch_timeline(
+                    interval=selected,
+                    start_time=selected_start,
+                    end_time=selected_end,
+                    device_type=selected_device,
+                    model_name=selected_model,
+                )
+                if not df_class_timeline.empty:
+                    class_order = (
+                        df_class_timeline.groupby('class_name')['count']
+                        .sum()
+                        .sort_values(ascending=True)
+                        .index.tolist()
+                    )
+                    df_class_timeline['class_name'] = pd.Categorical(
+                        df_class_timeline['class_name'],
+                        categories=class_order,
+                        ordered=True,
+                    )
+                    unique_times = sorted(df_class_timeline['timestamp'].unique())
+                    columns_count = len(unique_times)
+                    if columns_count >= 1:
+                        fig_timeline = go.Figure()
                         for cls in class_order:
                             df_cls = df_class_timeline[df_class_timeline['class_name'] == cls]
                             fig_timeline.add_trace(go.Bar(
@@ -282,66 +401,66 @@ def run_streamlit():
                                 y=df_cls['count'],
                                 name=cls,
                             ))
-                        fig_timeline.update_layout(barmode='stack')
-                    fig_timeline.update_traces(marker_line_width=0)
-                    fig_timeline.update_xaxes(
-                        type="date",
-                        title="Time",
-                        ticklabelmode="period",
-                        nticks=DTICK_MAP[selected] if columns_count < 60 else 15,
-                        tickformat=FORMAT_MAP[selected],
-                        tickangle=-45 if columns_count > 20 else 0
-                    )
-                    fig_timeline.update_layout(
-                        title=f"Diagram by detections every {per}",
-                        height=800,
-                        hovermode="x unified",
-                        yaxis_title="Number of Objects",
-                        legend_title="Class",
-                        xaxis_title="Time",
-                        transition={'duration': 0},
-                        uirevision='constant'
-                    )
-                    st.plotly_chart(fig_timeline, use_container_width=True, config={'displayModeBar': False, 'staticPlot': False})
+                        if len(class_order) > 1:
+                            fig_timeline.update_layout(barmode='stack')
+                        fig_timeline.update_traces(marker_line_width=0)
+                        fig_timeline.update_xaxes(
+                            type="date",
+                            title="Time",
+                            ticklabelmode="period",
+                            dtick=DTICK_MAP[selected] if columns_count < 60 else None,
+                            nticks=15 if columns_count >= 60 else None,
+                            tickformat=FORMAT_MAP[selected],
+                            tickangle=-45 if columns_count > 20 else 0,
+                        )
+                        fig_timeline.update_layout(
+                            title=f"Diagram by detections every {per}",
+                            height=800,
+                            hovermode="x unified",
+                            yaxis_title="Number of Objects",
+                            legend_title="Class",
+                            xaxis_title="Time",
+                            transition={'duration': 0},
+                            uirevision='constant',
+                        )
+                        st.plotly_chart(
+                            fig_timeline,
+                            use_container_width=True,
+                            config={'displayModeBar': False, 'staticPlot': False},
+                        )
                 else:
-                    st.info("A little data available for the selected time range.")
+                    st.info("No timeline data available for the selected filters.")    
 
             # Detection timeline line chart
             col1 = st.columns(1)[0]
             with col1:
-                df_timeline = df_detections.copy()
-                selected = INTERVAL_MAP[per]
-                df_timeline = df_timeline.set_index("timestamp")
-                df_hourly = (
-                    df_timeline.resample(selected)
-                    .size()
-                    .reset_index(name="count")
-                )
-                df_timeline = df_hourly
-                if len(df_timeline) > 2:
-                    df_timeline = df_timeline.iloc[1:-1]
-                fig_timeline = px.line(
-                    df_timeline,
-                    x=df_timeline.columns[0],
-                    y="count",
-                    title=f"Detection timeline every {per}",
-                    markers=True
-                )
-                fig_timeline.update_xaxes(
-                    type="date",
-                    title="Time",
-                    nticks=10,
-                    tickformat=FORMAT_MAP[selected],
-                    ticklabelmode="period",
-                    ticks="outside"
-                )
-                fig_timeline.update_layout(
-                    height=400,
-                    hovermode="x unified",
-                    yaxis_title="Number of Objects"
-                )
-                st.plotly_chart(fig_timeline, use_container_width=True)
-
+                if not df_class_timeline.empty:
+                    df_hourly = (
+                        df_class_timeline.groupby("timestamp", as_index=False)["count"]
+                        .sum()
+                        .sort_values("timestamp")
+                    )
+                    fig_line = px.line(
+                        df_hourly,
+                        x="timestamp",
+                        y="count",
+                        title=f"Detection timeline every {per}",
+                        markers=True,
+                    )
+                    fig_line.update_xaxes(
+                        type="date",
+                        title="Time",
+                        nticks=10,
+                        tickformat=FORMAT_MAP[selected],
+                        ticklabelmode="period",
+                        ticks="outside",
+                    )
+                    fig_line.update_layout(
+                        height=400,
+                        hovermode="x unified",
+                        yaxis_title="Number of Objects",
+                    )
+                    st.plotly_chart(fig_line, use_container_width=True)
             # Class distribution pie chart
             col1 = st.columns(1)[0]
             with col1:

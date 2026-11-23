@@ -21,6 +21,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, StreamingResponse, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
+from scipy import stats
 
 # Ensure both project root and current pipeline directory are in sys.path
 CURRENT_DIR = Path(__file__).resolve().parent
@@ -160,7 +161,7 @@ def check_db_instance():
 
 ## DATABASE MANAGEMENT ENDPOINTS
 @app.get("/database/status")
-async def database_status():
+def database_status():
     """Check database connection status"""
     global db, mqtt_client, mqtt_client_sending
     is_connected, _ = check_db_instance()
@@ -220,32 +221,60 @@ async def database_stop():
 
 ## DATABASE QUERIES ENDPOINTS
 # STATISTICS FROM DB ENDPOINT
-@app.get("/api/detections", response_model=List[DetectionResponse])
-async def get_detections(minutes: int = 5, limit: int = 100):
+@app.get("/api/filter_metadata")
+def get_filter_metadata():
+    """Return available timestamp bounds, device types, and model names in the database."""
     if db is None:
         raise HTTPException(status_code=503, detail="Database not initialized")
     try:
-        detections = db.get_recent_detections(minutes=minutes, limit=limit)
+        return db.get_filter_metadata()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching filter metadata: {str(e)}")
+
+@app.get("/api/timeline")
+def get_timeline(interval: str = "10min", start_time: Optional[datetime] = None, end_time: Optional[datetime] = None, 
+    device_type: Optional[str] = None, model_name: Optional[str] = None,):
+    """Return pre-aggregated detection counts per time bucket and class."""
+    if db is None:
+        raise HTTPException(status_code=503, detail="Database not initialized")
+    try:
+        return db.get_timeline_aggregated(interval=interval, start_time=start_time, end_time=end_time, device_type=device_type, model_name=model_name,)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching timeline: {str(e)}")
+
+@app.get("/api/detections", response_model=List[DetectionResponse])
+async def get_detections(minutes: int = 5, limit: int = 100000, start_time: Optional[datetime] = None, end_time: Optional[datetime] = None,
+    device_type: Optional[str] = None, model_name: Optional[str] = None,):
+    if db is None:
+        raise HTTPException(status_code=503, detail="Database not initialized")
+    try:
+        detections = db.get_detections_filtered(
+            start_time=start_time, 
+            end_time=end_time, 
+            device_type=device_type, 
+            model_name=model_name, 
+            minutes=minutes, 
+            limit=limit,
+        )
         #print(f"[FastAPI] Retrieved {len(detections)} detections from DB")
         #print(detections[0:5])  # Print first 5 detections for debugging
         #print(detections[0:1].keys(), detections[0:1].items())  # Print keys of the first detection
         result = []
         for d in detections:
-            try:
-                d_dict = dict(d)  # make sure it's a dict
-                result.append(
-                    DetectionResponse(
-                        id=d_dict['id'],
-                        timestamp=d_dict['timestamp_'],  # or d_dict['timestamp_'].isoformat()
-                        frame_id=d_dict['frame_id'],
-                        class_name=d_dict['class_name'],
-                        confidence=d_dict['confidence'],
-                        bbox=[d_dict['x1'], d_dict['y1'], d_dict['x2'], d_dict['y2']],
-                        track_id=d_dict['track_id']
-                    )
+            d_dict = dict(d)
+            result.append(
+                DetectionResponse(
+                    id=d_dict["id"],
+                    timestamp=d_dict["timestamp_"],
+                    frame_id=d_dict["frame_id"],
+                    class_name=d_dict["class_name"],
+                    confidence=d_dict["confidence"],
+                    bbox=[d_dict["x1"], d_dict["y1"], d_dict["x2"], d_dict["y2"]],
+                    track_id=d_dict["track_id"],
                 )
-            except Exception as inner_e:
-                print(f"[FastAPI] Error converting detection: {inner_e}, data: {d}")
+            )
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching detections: {str(e)}")
@@ -272,12 +301,18 @@ async def get_detection_counts(minutes: int = 5, per: str = "10 minutes"):
         raise HTTPException(status_code=500, detail=f"Error fetching detections: {str(e)}")
 
 @app.get("/api/statistics", response_model=Dict[str, StatisticsResponse])
-async def get_statistics(hours: int = 1):
+async def get_statistics(hours: int = 1, start_time: Optional[datetime] = None, end_time: Optional[datetime] = None, device_type: Optional[str] = None, model_name: Optional[str] = None,):
     """Get aggregated traffic statistics. Returns count and average confidence for each object type within the specified time window."""
     if db is None:
         raise HTTPException(status_code=503, detail="Database not initialized")
     try:
-        stats = db.get_statistics(hours=hours)
+        stats = db.get_statistics_filtered(
+            start_time=start_time,
+            end_time=end_time,
+            device_type=device_type,
+            model_name=model_name,
+            hours=hours,
+        )
         return {
             class_name: StatisticsResponse(
                 class_name=class_name,
