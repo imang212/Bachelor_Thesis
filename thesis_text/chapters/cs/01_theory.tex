@@ -113,7 +113,7 @@ Poslední rutinní fází je \textbf{normalizace barev}. Hodnoty jednotlivých p
 
 \begin{figure}[H]
     \centering
-\includegraphics[width=\textwidth]{images/preprocessing_gstreamer_final.jpg}
+\includegraphics[width=1\textwidth]{images/preprocessing_gstreamer_final.jpg}
     \caption{Příklad dvoufázového vymezení oblasti zájmu, hardwarový ořez vlevo a softwarová analytická zóna vpravo (vlastní zpracování).}
     \label{fig:image_preprocessing}
 \end{figure}
@@ -153,7 +153,7 @@ Architektura \acs{SSD} (z~angl. \textit{Single Shot MultiBox Detector}) detekuje
 Ačkoliv SSD dosahuje stabilní přesnosti, naprostou revoluci v~efektivitě přinesla architektura \acs{YOLO} (z~angl. \textit{You Only Look Once}), která od základů transformovala přístup k~počítačovému vidění. Namísto dvoufázového generování návrhů oblastí (jako u~starších sítí \acs{R-CNN}, z~angl. \textit{Region-based Convolutional Neural Network}) formuluje detekci jako jedinou, \textit{end-to-end} regresní úlohu~\cite{redmon_yolo_2016}.
 
 \begin{figure}[H]
-    \centering    \includegraphics[width=1\textwidth]{images/yolo_v1_diagram.png}
+    \centering    \includegraphics[width=1\textwidth]{images/yolo_v1_diagram_CZ.png}
     \caption{Základní princip detekce modelu YOLO využívající rozdělení obrazu do mřížky (převzato z~\cite[s.~2]{redmon_yolo_2016}).}
     \label{fig:detection_principe}
 \end{figure}
@@ -166,14 +166,21 @@ Jak ukazuje obrázek~\ref{fig:detection_principe}, vstupní obraz je nejprve vir
     \caption{Vnitřní architektura modelu YOLO znázorňující sekvenci konvolučních a plně propojených vrstev (převzato z~\cite[s.~3]{redmon_yolo_2016}).}
     \label{fig:yolo_arch}
 \end{figure}
-Na obrázku~\ref{fig:yolo_arch} je detailně znázorněna topologie vrstev původního modelu YOLO, jejíž architektura byla přímo inspirována modelem GoogLeNet\footnote{GoogLeNet (známý také pod označením Inception v1) je průlomová architektura hluboké konvoluční neuronové sítě od společnosti Google, která v~roce 2014 zvítězila v~prestižní soutěži počítačového vidění ImageNet (ILSVRC). Vyznačuje se velmi vysokou výpočetní efektivitou.}. Systém na svém vstupu přijímá obraz o~přesném rozlišení $448 \times 448$ pixelů. Samotná síť se skládá z~24 konvolučních vrstev\footnote{Konvoluce v~počítačovém vidění představuje matematickou operaci, při které se na obraz (nebo mapu příznaků) aplikuje malá matice vah, tzv. filtr či kernel. Tento filtr postupně „klouže“ po obraze a~extrahuje z~něj klíčové vizuální rysy – od jednoduchých hran až po komplexní tvary vozidel~\cite{szeliski_computer_vision}.}, které slouží k~postupné a hluboké extrakci vizuálních příznaků z~obrazu (od jednoduchých hran až po komplexní tvary vozidel). Za nimi následují 2 plně propojené vrstvy (z~angl. \textit{fully connected layers}), jež získané příznaky agregují a generují finální predikční tenzor o~rozměrech $7 \times 7 \times 30$.
+Na obrázku~\ref{fig:yolo_arch} je detailně znázorněna topologie vrstev původního modelu YOLO, jejíž architektura byla přímo inspirována modelem GoogLeNet\footnote{GoogLeNet (známý také pod označením Inception v1) je průlomová architektura hluboké konvoluční neuronové sítě od společnosti Google, která v~roce 2014 zvítězila v~prestižní soutěži počítačového vidění ImageNet (ILSVRC). Vyznačuje se velmi vysokou výpočetní efektivitou~\cite{szeliski_computer_vision, redmon_yolo_2016}.}. Systém na svém vstupu přijímá obraz s~přesným rozlišením $448 \times 448$ pixelů. Samotná síť se skládá z~24 konvolučních vrstev\footnote{Konvoluce v~počítačovém vidění představuje matematickou operaci, při které se na obraz (nebo mapu příznaků) aplikuje malá matice vah, tzv. filtr či kernel. Tento filtr postupně „klouže“ po obraze a~extrahuje z~něj klíčové vizuální rysy od jednoduchých hran až po komplexní tvary vozidel~\cite{szeliski_computer_vision}.}, které slouží k~postupné a hluboké extrakci vizuálních příznaků z~obrazu. Za nimi následují 2 plně propojené vrstvy (z~angl. \textit{fully connected layers}), jež získané příznaky agregují a generují finální predikční tenzor o~rozměrech $7 \times 7 \times 30$.
 
-Klíčovým inovačním prvkem této architektury je zařazení střídavých redukčních konvolučních vrstev s~filtrem $1 \times 1$. Tyto vrstvy fungují jako informační úzká hrdla (z~angl. \textit{bottlenecks}) – efektivně zmenšují prostor příznaků z~předchozích vrstev, čímž drasticky redukují množství potřebných matematických operací bez zásadní ztráty kontextu. 
+Klíčovým inovačním prvkem této architektury je zařazení střídavých redukčních konvolučních vrstev s~filtrem $1 \times 1$. Tyto vrstvy fungují jako informační úzká hrdla (z~angl. \textit{bottlenecks}) –~efektivně zmenšují prostor příznaků z~předchozích vrstev, čímž drasticky redukují množství potřebných matematických operací bez zásadní ztráty kontextu. 
 
-Moderní varianty modelů z~rodiny YOLO jsou pro účely přesné objektové detekce standardně trénovány a vyhodnocovány na rozsáhlém datasetu \acs{COCO}~\footnote{\href{https://www.kaggle.com/datasets/erennik/coconames}{COCO dataset}} (z~angl. \textit{Common Objects in Context})~\cite{lin_coco_2014}. Tento dataset obsahuje stovky tisíc detailně anotovaných snímků reálných scén a plně definuje 80 základních tříd objektů, což detekčnímu modelu poskytuje vysoce robustní výchozí základ pro spolehlivé rozpoznávání různorodých účastníků dopravního provozu (osobní automobily, autobusy, nákladní vozy či chodce).
+Moderní varianty modelů z~rodiny YOLO jsou pro účely přesné objektové detekce standardně trénovány a~vyhodnocovány na rozsáhlém datasetu \acs{COCO}\footnote{Seznam 80 objektových tříd datasetu COCO: \url{https://docs.ultralytics.com/datasets/detect/coco/}.} (z~angl. \textit{Common Objects in Context})~\cite{lin_coco_2014}. Tento dataset obsahuje stovky tisíc detailně anotovaných snímků reálných scén a plně definuje 80 základních tříd objektů, což detekčnímu modelu poskytuje vysoce robustní výchozí základ pro spolehlivé rozpoznávání různorodých účastníků dopravního provozu (osobní automobily, autobusy, nákladní vozy či chodce).
 
 \subsection{Architektura a škálování variant modelu YOLOv8}
-Významný architektonický posun přinesla generace modelů YOLOv8, vyvinutá společností Ultralytics~\cite{terven_yolo_review_2023, ultralytics_yolov8_docs}. Oproti starším generacím opouští YOLOv8 koncept předdefinovaných kotevních obdélníků a~zavádí plně bezkotevní (\textit{anchor-free}) detekci, která přímo predikuje střed objektu a~jeho vzdálenosti k~hranám ohraničujícího rámečku. Detekční hlava je navíc rozdělena (\textit{decoupled head}) na dvě nezávislé větve – jedna řeší výhradně klasifikaci tříd pomocí binární křížové entropie (BCE) a~druhá prostorovou regresi souřadnic a~tvaru rámečku pomocí ztrátových funkcí CIoU (\textit{Complete IoU}) a~DFL (\textit{Distribution Focal Loss}). V~páteřní síti (\textit{backbone}) a~krku (\textit{neck}) byl starší konvoluční blok C3 nahrazen novým stavebním modulem C2f (\textit{CSP Bottleneck with 2 convolutions}, vycházejícím z~topologie \textit{Cross Stage Partial}), který rozdělením a~opětovným spojením map příznaků zajišťuje bohatší tok gradientů při zachování nízké výpočetní náročnosti~\cite{terven_yolo_review_2023}.
+Významný architektonický posun přinesla generace modelů YOLOv8, vyvinutá společností Ultralytics~\cite{terven_yolo_review_2023, ultralytics_yolov8_docs}. Oproti starším generacím opouští YOLOv8 koncept předdefinovaných kotevních obdélníků a~zavádí plně bezkotevní (\textit{anchor-free}) detekci, která přímo predikuje střed objektu a~jeho vzdálenosti k~hranám ohraničujícího rámečku. Detekční hlava je navíc rozdělena (\textit{decoupled head}) na dvě nezávislé větve – jedna řeší výhradně klasifikaci tříd pomocí binární křížové entropie (BCE) a~druhá prostorovou regresi souřadnic a~tvaru rámečku pomocí ztrátových funkcí CIoU (\textit{Complete IoU}) a~DFL (\textit{Distribution Focal Loss}). V~páteřní síti (\textit{backbone}) a~krku (\textit{neck}) byl starší konvoluční blok C3 nahrazen novým stavebním modulem C2f (\textit{CSP Bottleneck with 2 convolutions}, vycházejícím z~topologie \textit{Cross Stage Partial}), který rozdělením a~opětovným spojením map příznaků zajišťuje bohatší tok gradientů při zachování nízké výpočetní náročnosti~\cite{terven_yolo_review_2023}. Vnitřní propojení páteřní sítě (\textit{Backbone}), krku (\textit{Neck}) a~bezkotevní detekční hlavy (\textit{Head}) je detailně znázorněno na obrázku~\ref{fig:yolov8_arch}.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1.0\textwidth]{images/yolov8m_architecture.png}
+    \caption{Detailní architektonické schéma modelu YOLOv8 znázorňující páteřní síť (Backbone), krk (Neck), detekční hlavu (Head) a~strukturu modulů C2f, SPPF a~Bottleneck (převzato z~\cite{terven_yolo_review_2023}).}
+    \label{fig:yolov8_arch}
+\end{figure}
 
 Aby bylo možné tutéž architekturu nasadit jak na extrémně úsporných mikropočítačích, tak na výkonných cloudových serverech, je rodina YOLOv8 rozdělena do pěti velikostních variant: Nano (\texttt{n}), Small (\texttt{s}), Medium (\texttt{m}), Large (\texttt{l}) a~Extra Large (\texttt{x})~\cite{ultralytics_yolov8_docs}. Všechny tyto varianty sdílejí totožnou makro-architekturu – tedy stejné pořadí konvolučních vrstev, bloků C2f a~víceškálové agregační vrstvy SPPF (\textit{Spatial Pyramid Pooling -- Fast}), ale liší se hodnotou tří škálovacích koeficientů (\textit{compound scaling constants})~\cite{terven_yolo_review_2023, ultralytics_yolov8_docs}:
 \begin{itemize}
@@ -277,14 +284,21 @@ Zásadním omezením samotné architektury Raspberry Pi je však její hrubý v�
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.75\textwidth]{images/device_with_hailo_processor.jpg}
+    \includegraphics[width=0.65\textwidth]{images/device_with_hailo_processor.jpg}
     \caption{Rozšiřující modul Raspberry Pi AI HAT+ s~integrovaným procesorem Hailo-8 (převzato z~\cite{rpishop_ai_hat}).}
     \label{fig:hailo_antratek}
 \end{figure}
 \vspace{-0.2cm}
 Řešením tohoto výpočetního omezení je využití specializovaných rozšiřujících desek, jako je modul Raspberry Pi AI HAT+ (znázorněný na obrázku~\ref{fig:hailo_antratek}). Srdcem tohoto modulu, připojeného přes rozhraní \acs{PCIe}, je pokročilý AI procesor Hailo-8 od stejnojmenné izraelské společnosti, jež se specializuje na vývoj výkonných neurálních akcelerátorů.
 
-Klíčovým parametrem tohoto akcelerátoru je deklarovaný výpočetní výkon 26 \acs{TOPS} (z~angl. \textit{Tera Operations Per Second}). Předpona „Tera“ v~matematickém vyjádření představuje hodnotu $10^{12}$. Tento čip je tedy fyzicky schopen odbavit masivních $26 \times 10^{12}$ (26 bilionů) operací za jedinou sekundu při inferenci modelu. To, jakým způsobem tohoto výkonu dosahuje, je však stejně důležité jako samotná číselná hodnota. Čipy Hailo využívají inovativní architekturu řízenou datovým tokem (z~angl. \textit{Structure-Defined Dataflow Architecture}). Zatímco tradiční \acs{GPU} zpracovávají vrstvy neuronové sítě sekvenčně a neustále zapisují data do externí paměti, Hailo-8 mapuje celou topologii neuronové sítě přímo na své hardwarové zdroje. Obrazová data tak čipem protékají kontinuálně od jedné vrstvy ke druhé bez nutnosti přístupu k~externí \acs{RAM}.
+Klíčovým parametrem tohoto akcelerátoru je deklarovaný výpočetní výkon 26 \acs{TOPS} (z~angl. \textit{Tera Operations Per Second}). Předpona „Tera“ v~matematickém vyjádření představuje hodnotu $10^{12}$. Tento čip je tedy fyzicky schopen odbavit masivních $26 \times 10^{12}$ (26 bilionů) operací za jedinou sekundu při inferenci modelu. To, jakým způsobem tohoto výkonu dosahuje, je však stejně důležité jako samotná číselná hodnota. Čipy Hailo využívají inovativní architekturu řízenou datovým tokem (z~angl. \textit{Structure-Defined Dataflow Architecture}). Zatímco tradiční \acs{GPU} zpracovávají vrstvy neuronové sítě sekvenčně a neustále zapisují data do externí paměti, Hailo-8 mapuje celou topologii neuronové sítě přímo na své hardwarové zdroje. Obrazová data tak čipem protékají kontinuálně od jedné vrstvy ke druhé bez nutnosti přístupu k~externí \acs{RAM}, jak ilustruje obrázek~\ref{fig:hailo_dataflow}.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.7\textwidth]{images/hailo_architecture.png}
+    \caption{Princip architektury řízené datovým tokem (Structure-Defined Dataflow Architecture) u~neurálních procesorů Hailo-8 (převzato z~\cite{hailo_architecture_2026}).}
+    \label{fig:hailo_dataflow}
+\end{figure}
 
 Tato obrovská výpočetní propustnost spojená s~extrémní energetickou účinností neposkytuje pouze dostatek výkonu pro plynulý běh pokročilých modelů rodiny YOLO. Systému dodává takovou kapacitní rezervu, že dokáže inferenci vysoce paralelizovat. V~praxi to znamená, že systém může přijímat a vyhodnocovat obrazová data z~několika nezávislých video streamů zcela naráz (například synchronní analýza \acs{RTSP} toků ze dvou různých IP kamer na křižovatce), aniž by došlo k~degradaci počtu zpracovaných snímků za sekundu (FPS)~\cite{hailo_alpr_2024, hailo_architecture_2026}. Tím se toto kompaktní hardwarové řešení stává vysoce škálovatelným nástrojem pro robustní a přesné sledování dopravy.
 
@@ -292,7 +306,7 @@ Tato obrovská výpočetní propustnost spojená s~extrémní energetickou úči
 Vyhodnocení kvality systémů pro detekci, sledování a počítání objektů představuje nedílnou součást návrhu a implementace řešení založených na počítačovém vidění. Cílem evaluace je objektivně posoudit spolehlivost navrženého systému a identifikovat jeho limity. V~oblasti dopravního monitorování je však důležité odlišit hodnocení samotného matematického modelu (zda správně detekuje obdélníky v~izolovaném snímku) od hodnocení celého systému jako funkčního celku (zda spolehlivě počítá vozidla v~čase)~\cite{szeliski_computer_vision, zhou_traffic_survey_2024}.
 
 \subsection{Metodika vyhodnocení detekce v~reálném prostředí}
-Pro vyhodnocení přesnosti rozpoznávání objektů nasazeným modelem YOLO v~konkrétním kamerovém streamu se využívá metoda manuální obrazové analýzy vybraných referenčních snímků. Vzhledem k~absenci předem připraveného a anotovaného datasetu pro danou lokaci jsou z~videozáznamu extrahovány reprezentativní statické snímky (např. v~různých světelných podmínkách či při různé hustotě provozu).~\cite{zhou_traffic_survey_2024, mdpi_roi_tracking_2022}
+Pro vyhodnocení přesnosti rozpoznávání objektů nasazeným modelem YOLO v~konkrétním kamerovém streamu se využívá metoda manuální obrazové analýzy vybraných referenčních snímků. Vzhledem k~absenci předem připraveného a anotovaného datasetu pro danou lokaci jsou z~videozáznamu extrahovány reprezentativní statické snímky (např. v~různých světelných podmínkách či při různé hustotě provozu)~\cite{zhou_traffic_survey_2024, mdpi_roi_tracking_2022}.
 
 V~těchto izolovaných snímcích je následně provedeno pečlivé manuální sečtení a označení všech reálně přítomných vozidel lidským pozorovatelem, čímž vzniká lokální referenční vzorek (\textit{ground truth}). Výstup detekčního modelu na stejném snímku je s~tímto vzorkem vizuálně porovnán, přičemž jsou pro každou třídu identifikovány a zaznamenány následující hodnoty~\cite{szeliski_computer_vision, terven_yolo_review_2023}:
 \begin{itemize}
@@ -322,6 +336,12 @@ Na základě těchto hodnot jsou následně vypočítány reálné metriky pro d
 Při vývoji a~vyhodnocování detekčních modelů i~navazujících sčítacích systémů se k~objektivnímu měření výkonu vůči referenčním datům (\textit{ground truth}) využívá standardizovaná sada matematických metrik~\cite{szeliski_computer_vision}:
 
 \medskip
+\noindent\textbf{IoU (Intersection over Union):} Vyjadřuje exaktní míru geometrického překryvu mezi predikovaným ohraničujícím obdélníkem ($B_{\text{pred}}$) a~referenčním obdélníkem ($B_{\text{gt}}$). Čím více se hodnota blíží k~jedné, tím je lokalizace přesnější (během inference a~sledování si tuto metriku model, resp. algoritmus NMS a~tracker, vyhodnocuje automaticky v~každém snímku):
+$$\text{IoU} = \frac{\text{Plocha průniku } (B_{\text{pred}} \cap B_{\text{gt}})}{\text{Plocha sjednocení } (B_{\text{pred}} \cup B_{\text{gt}})}$$
+
+\noindent\textbf{mAP (Mean Average Precision):} Představuje komplexní ukazatel výkonu modelu napříč všemi detekovanými třídami ($N$) na referenčních datasetech (např. COCO), který zohledňuje přesnost, úplnost i~kvalitu lokalizace zjištěnou pomocí plochy pod křivkou \textit{Average Precision} ($AP_i$). Tuto metriku si detekční framework automaticky vypočítává při validaci modelu nad testovací sadou:
+$$\text{mAP} = \frac{1}{N} \sum_{i=1}^{N} AP_i$$
+
 \noindent\textbf{Precision (Přesnost):} Vyjadřuje podíl skutečně správných detekcí vůči všem detekcím, které systém vyprodukoval. Indikuje, do jaké míry lze modelu věřit, když ohlásí nález vozidla:
 $$\text{Precision} = \frac{TP}{TP + FP}$$
 
@@ -330,12 +350,6 @@ $$\text{Recall} = \frac{TP}{TP + FN}$$
 
 \noindent\textbf{F1-skóre:} Představuje harmonický průměr přesnosti (Precision) a~úplnosti (Recall), který poskytuje vyváženou souhrnnou metriku i~při nerovnoměrném zastoupení chyb typu $FP$ a~$FN$:
 $$F1 = 2 \cdot \frac{\text{Precision} \cdot \text{Recall}}{\text{Precision} + \text{Recall}} = \frac{2 \cdot TP}{2 \cdot TP + FP + FN}$$
-
-\noindent\textbf{IoU (Intersection over Union):} Vyjadřuje exaktní míru geometrického překryvu mezi predikovaným ohraničujícím obdélníkem ($B_{\text{pred}}$) a~referenčním obdélníkem ($B_{\text{gt}}$). Čím více se hodnota blíží k~jedné, tím je lokalizace přesnější:
-$$\text{IoU} = \frac{\text{Plocha průniku } (B_{\text{pred}} \cap B_{\text{gt}})}{\text{Plocha sjednocení } (B_{\text{pred}} \cup B_{\text{gt}})}$$
-
-\noindent\textbf{mAP (Mean Average Precision):} Představuje komplexní ukazatel výkonu modelu napříč všemi detekovanými třídami ($N$) na referenčních datasetech (např. COCO), který zohledňuje přesnost, úplnost i~kvalitu lokalizace zjištěnou pomocí plochy pod křivkou \textit{Average Precision} ($AP_i$):
-$$\text{mAP} = \frac{1}{N} \sum_{i=1}^{N} AP_i$$
 
 \noindent\textbf{Accuracy (Přesnost klasifikace):} Metrika vyjadřující podíl správných rozhodnutí vůči všem případům. Při vyhodnocování detekce dopravních objektů (kde se neurčuje počet $TN$ prázdného pozadí, tedy $TN = 0$) přechází vztah do podoby tzv. \textit{Critical Success Index}:
 $$\text{Accuracy} = \frac{TP + TN}{TP + TN + FP + FN}$$

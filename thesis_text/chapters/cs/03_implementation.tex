@@ -16,12 +16,12 @@ První část této kapitoly se věnuje modularizaci zdrojového kódu, správě
 \section{Modularizace kódu, správa konfigurace a kontejnerizace}
 Pro zajištění udržitelnosti kódu a~eliminaci duplicit mezi okrajovým zařízením (\texttt{rpi\_src/}) a~referenční pracovní stanicí (\texttt{pc\_src/}) byla společná infrastruktura vyčleněna do sdíleného balíčku \texttt{common/}. Tento modul zapouzdřuje správu databázových spojení (\texttt{PostgreDatabaseManager}), komunikačního klienta (\texttt{MQTTPublisher}) a~centralizované načítání konfigurace (\texttt{config.py}). Webová část na okrajovém zařízení byla rovněž rozdělena na samostatný backendový server (\texttt{API\_with\_streamlit.py}) a~prezentační rozhraní (\texttt{streamlit\_dashboard.py}).
 
-Z~hlediska kybernetické bezpečnosti jsou veškeré citlivé přihlašovací údaje (hesla k~databázi PostgreSQL, přístupové údaje k~MQTT brokeru a~autentizační URL adresy \acs{RTSP} kamerových toků) odděleny od zdrojového kódu a~načítány dynamicky z~proměnných prostředí prostřednictvím souboru \texttt{.env} (v~repozitáři je verzována pouze anonymizovaná šablona \texttt{.env.example}).
+Z~hlediska kybernetické bezpečnosti jsou veškeré citlivé přihlašovací údaje (hesla k~databázi PostgreSQL, přístupové údaje k~MQTT brokeru a~autentizační URL adresy \acs{RTSP} kamerových toků) odděleny od zdrojového kódu a~načítány dynamicky z~proměnných prostředí prostřednictvím souboru~\texttt{.env} (v~repozitáři je verzována pouze anonymizovaná šablona \texttt{.env.example}).
 
 Pro usnadnění replikovatelnosti experimentů a~rychlé nasazení bez nutnosti manuální instalace závislostí (popsané v~externí příloze~\ref{app:external}) byla implementována podpora kontejnerizace pomocí platformy Docker~\cite{docker_docs} a~nástroje Docker Compose:
 \begin{itemize}
     \item \textbf{Kontejnerizované referenční prostředí (\texttt{pc\_src/docker-compose.yml}):} Definuje kompletní stoh služeb zahrnující databázi PostgreSQL (s~automatickou inicializací schématu pomocí skriptu \texttt{init\_hailo.sql}) a~výpočetní kontejner s~akcelerací NVIDIA GPU pro běh referenčního detekčního skriptu. 
-    \item \textbf{Simulační prostředí (\texttt{rpi\_src/docker/}):} Umožňuje otestovat průchod dat celým řetězcem (od simulovaného publikování MQTT událostí přes databázovou vrstvu až po vykreslení ve webovém dashboardu) v~izolovaných kontejnerech i~na zařízeních bez fyzicky připojeného akcelerátoru Hailo-8.
+    \item \textbf{Simulační prostředí (\texttt{rpi\_src/docker/}):} Umožňuje otestovat průchod dat celým řetězcem (od simulovaného publikování MQTT událostí přes databázovou vrstvu až po vykreslení ve webovém dashboardu) v~izolovaných kontejnerech i~na zařízeních bez fyzicky připojeného akcelerátoru Hailo-8. Pro zajištění deterministického sestavení a~ochrany proti nechtěné změně obsahu bázových obrazů při zachování stejného textového označení (tagu) jsou základní obrazy v~souborech \texttt{Dockerfile.pipeline} a~\texttt{Dockerfile.api} fixovány nejen konkrétní verzí, ale i~kryptografickým otiskem SHA-256.
     \item \textbf{Automatizované testování a~CI/CD pipeline (\texttt{tests/}, \texttt{.github/workflows/}):} Pro ověření spolehlivosti klíčových komponent byla pomocí frameworku \texttt{pytest} vytvořena sada jednotkových testů (\texttt{test\_common.py}), která testuje načítání konfigurace, sestavování RTSP a~databázových spojení a~geometrickou logiku rozhodování o~přítomnosti bodu uvnitř polygonu \acs{ROI}. Tyto testy jsou spolu s~validací syntaxe Docker Compose souborů a~Kubernetes manifestů automaticky spouštěny při každé změně kódu v~rámci CI/CD pipeline v~prostředí GitHub Actions (\texttt{ci.yml}).
 \end{itemize}
 
@@ -69,7 +69,7 @@ hailomz compile yolov8m \
     --classes 80
 \end{lstlisting}
 
-Přestože vlastní kompilace generovala validní soubory \texttt{.hef}, vzhledem k~výše popsanému propadu výkonu při neúplném mapování grafu na akcelerátor (~2~FPS při běhu na CPU) byl pro ostrý provoz na zařízení Raspberry Pi~5 nasazen referenční předkompilovaný soubor \texttt{yolov8m.hef} z~oficiálního repozitáře~\cite{hailo_rpi5_examples}, který plně využívá hardwarové zdroje čipu Hailo-8 při nízké latenci a~spotřebě energie.
+Přestože vlastní kompilace generovala validní soubory~\texttt{.hef}, vzhledem k~výše popsanému propadu výkonu při neúplném mapování grafu na akcelerátor (~2~FPS při běhu na CPU) byl pro ostrý provoz na zařízení Raspberry Pi~5 nasazen referenční předkompilovaný soubor \texttt{yolov8m.hef} z~oficiálního repozitáře~\cite{hailo_rpi5_examples}, který plně využívá hardwarové zdroje čipu Hailo-8 při nízké latenci a~spotřebě energie.
 
 \section{Implementace zpracování videa a detekce}
 
